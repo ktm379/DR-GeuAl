@@ -1,0 +1,1 @@
+We aim to diagnose DR more effectively by segmenting its detailed symptoms.
