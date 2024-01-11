@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-def crop_and_resize_image(channels, img_size):
+def crop_and_resize_image(image, img_size):
     '''
     각 채널을 받아 크기 조정(512x512 픽셀로 다운샘플링), 
     이미지 크롭 수행(FOV의 직경과 동일한 정사각형),
@@ -9,14 +9,12 @@ def crop_and_resize_image(channels, img_size):
     
     img_size=(512, 512)
     '''
-    resized_channels = [cv2.resize(channel, img_size) for channel in channels]
+    resized_image = cv2.resize(image, img_size)
 
-    diameter = min(resized_channels[0].shape[0], resized_channels[0].shape[1])
-    center_x, center_y = resized_channels[0].shape[1] // 2, resized_channels[0].shape[0] // 2
+    diameter = min(resized_image.shape[0], resized_image.shape[1])
+    center_x, center_y = resized_image.shape[1] // 2, resized_image.shape[0] // 2
     crop_size = min(center_x, center_y, diameter // 2)
-    cropped_channels = [channel[center_y - crop_size:center_y + crop_size, center_x - crop_size:center_x + crop_size] for channel in resized_channels]
-
-    cropped_image = cv2.merge(cropped_channels)
+    cropped_image = resized_image[center_y - crop_size:center_y + crop_size, center_x - crop_size:center_x + crop_size]
 
     return cropped_image
   
@@ -28,9 +26,11 @@ def preprocess_image(image_path, img_size=(512, 512)):
     '''
     original_image = cv2.imread(image_path)
 
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-    contrast_enhanced_channels = [clahe.apply(original_image[:, :, i]) for i in range(3)]
+    green_channel = original_image[:, :, 1]
 
-    cropped_image = crop_and_resize_image(contrast_enhanced_channels, img_size)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    contrast_enhanced_image = clahe.apply(green_channel)
+
+    cropped_image = crop_and_resize_image(contrast_enhanced_image, img_size)
 
     return cropped_image
