@@ -36,23 +36,22 @@ class DR_Generator(tf.keras.utils.Sequence):
                mask_path=None,
                batch_size=4,
                img_size=(512, 512),
-               is_train=True,
-               is_test=False,
-               dataset=None):
+               dataset=None,
+               start_end_index=None):
         '''
         dir_path (str): image path
         mask_path ([str]): mask path
         batch_size (int): batch_size
         img_size (224, 224, 3): 다루는 이미지 사이즈
-        dataset (str) : 가져오려는 dataset 이름 , APTOS or FGADR        
+        dataset (str) : 가져오려는 dataset 이름 , APTOS or FGADR or EyePacks      
+        start_end_index : dataset 중 가져오려는 index의 시작과 끝
         '''
         self.dir_path = dir_path
         self.mask_path = mask_path
         self.batch_size = batch_size
-        self.is_train = is_train
-        self.is_test = is_test
         self.img_size = img_size
         self.dataset = dataset
+        self.start_end_index = start_end_index
         
 
         # load_dataset()을 통해서 directory path에서 라벨과 이미지를 확인
@@ -87,19 +86,8 @@ class DR_Generator(tf.keras.utils.Sequence):
         else:
           data_paths = [_ for _ in zip(input_images_paths)]
         
-        
-        if self.dataset == "APTOS":
-          return data_paths
-        
-        if self.dataset == "FGADR":
-          # train
-          if self.is_train:
-            return data_paths[:1290]
-          # test
-          if self.is_test:
-            return data_paths[1474:]
-          # valid
-          return data_paths[1290:1474]
+        start, end = self.start_end_index
+        return data_paths[start:end] 
     
     def __len__(self):
         # Generator의 length로서 전체 dataset을 batch_size로 나누고 소숫점 첫째자리에서 올림한 값을 반환
@@ -140,6 +128,9 @@ class DR_Generator(tf.keras.utils.Sequence):
             
             inputs[i] = _input
             outputs[i] = _output
+        
+        if self.dataset == "EyePacks":
+           return inputs, inputs
         
         return inputs, outputs
 
