@@ -95,7 +95,7 @@ class DR_Generator(tf.keras.utils.Sequence):
 
     def __getitem__(self, index):
         # 입력과 출력을 만드는 함수
-        # 입력은 resize및 augmentation이 적용된 input image이고 
+        # 입력은 전처리가 input image이고 
         # 출력은 semantic label
         batch_data_paths = self.data_paths[
                                index*self.batch_size:
