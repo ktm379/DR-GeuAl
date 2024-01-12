@@ -37,7 +37,8 @@ class DR_Generator(tf.keras.utils.Sequence):
                batch_size=4,
                img_size=(512, 512),
                dataset=None,
-               start_end_index=None):
+               start_end_index=None,
+               is_train=True):
         '''
         dir_path (str): image path
         mask_path ([str]): mask path
