@@ -18,7 +18,7 @@ def crop_and_resize_image(image, img_size):
 
     return cropped_image
   
-def preprocess_image(image_path, img_size=(512, 512)):
+def preprocess_image(image_path, img_size=(512, 512), use_hist=True):
     '''
     image_path를 받아 이미지를 읽고, 
     각 채널에 대한 대비 향상, 
@@ -28,9 +28,14 @@ def preprocess_image(image_path, img_size=(512, 512)):
 
     green_channel = original_image[:, :, 1]
 
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-    contrast_enhanced_image = clahe.apply(green_channel)
+    if use_hist:
+      clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+      contrast_enhanced_image = clahe.apply(green_channel)
 
-    cropped_image = crop_and_resize_image(contrast_enhanced_image, img_size)
+      cropped_image = crop_and_resize_image(contrast_enhanced_image, img_size)
 
-    return cropped_image
+      return cropped_image
+    else:
+      cropped_image = crop_and_resize_image(green_channel, img_size)
+
+      return cropped_image
