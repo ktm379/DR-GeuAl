@@ -29,6 +29,8 @@ import matplotlib.pyplot as plt
 
 # RandomGenerator
 
+# RandomGenerator
+
 class DR_Generator(tf.keras.utils.Sequence):
     '''
     tf.keras.utils.Sequence를 상속받아 Sequence를 커스텀해 사용
@@ -157,7 +159,7 @@ class DR_Generator(tf.keras.utils.Sequence):
               _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=False)
               _se = _se / 255.0
               se[i] = _se
-            
+              
             else:
               # mask 없음
               input_img_path,  = data
@@ -170,13 +172,25 @@ class DR_Generator(tf.keras.utils.Sequence):
                         
             inputs[i] = _input
             
+        # shape 추가해주기
+        # (batch, 512, 512) -> (batch, 512, 512, 1)
+        inputs = inputs.reshape(self.batch_size, *self.img_size, 1)
+            
         # mask 없을 때는 input이 label이 됨
         if self.dataset == "EyePacks":
-           return inputs, inputs
+            return inputs, inputs
         
         # input, [mask 4개]
         if self.dataset == "FGADR":
-          return inputs, [ex, he, ma, se]
+            
+            # shape 추가해주기
+            # (batch, 512, 512) -> (batch, 512, 512, 1)
+            ex = ex.reshape(self.batch_size, *self.img_size, 1)
+            he = he.reshape(self.batch_size, *self.img_size, 1)
+            ma = ma.reshape(self.batch_size, *self.img_size, 1)
+            se = se.reshape(self.batch_size, *self.img_size, 1)
+            
+            return inputs, [ex, he, ma, se]
         
     def on_epoch_end(self):
         # 한 epoch가 끝나면 실행되는 함수
