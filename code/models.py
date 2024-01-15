@@ -115,7 +115,7 @@ class EncoderBlock(tf.keras.layers.Layer):
             x = conv_block[1](x)
 
             # 맨 마지막 층을 제외하고는 skip connection, downsampling을 진행
-            if conv_block[0].filters != 1024:
+            if conv_block[0].filters != self.filters[-1]:
                 skips.append(x)
                 x = max_pooling(x)
         return x, skips
@@ -137,10 +137,10 @@ class DecoderBlock(tf.keras.layers.Layer):
         return x
       
 class SMD_Unet(tf.keras.Model):
-    def __init__(self):
+    def __init__(self, filters):
         super(SMD_Unet, self).__init__()
 
-        self.filters = [64, 128, 256, 512, 1024]
+        self.filters = filters
 
         # Encoder
         self.encoder = EncoderBlock(self.filters)
