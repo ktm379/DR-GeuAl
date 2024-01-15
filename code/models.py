@@ -79,23 +79,25 @@ class ConvBlock(tf.keras.layers.Layer):
         x = self.relu(x)
         
         return x
-  
-class UpsampleBlock(tf.keras.layers.Layer):
-  def __init__(self, n_filters):
-    super(UpsampleBlock, self).__init__()
-    self.filters = n_filters
-    self.conv_T = keras.layers.Conv2DTranspose(n_filters, (2, 2), strides=2, padding='same')
-    self.conv_block_1 = ConvBlock(n_filters)
-    self.concat = keras.layers.Concatenate()
-    self.conv_block_2 = ConvBlock(n_filters)
-  
-  def call(self, x, skip):
-    x = self.conv_T(x)
-    x = self.conv_block_1(x)
-    x = self.concat([x, skip])
-    x = self.conv_block_2(x)
+
     
-    return x   
+    
+class UpsampleBlock(tf.keras.layers.Layer):
+    def __init__(self, n_filters):
+        super(UpsampleBlock, self).__init__()
+        self.filters = n_filters
+        self.conv_T = keras.layers.Conv2DTranspose(n_filters, (2, 2), strides=2, padding='same')
+        self.conv_block_1 = ConvBlock(n_filters)
+        self.concat = keras.layers.Concatenate()
+        self.conv_block_2 = ConvBlock(n_filters)
+
+    def call(self, x, skip):
+        x = self.conv_T(x)
+        x = self.conv_block_1(x)
+        x = self.concat([x, skip])
+        x = self.conv_block_2(x)
+
+        return x   
 
 class EncoderBlock(tf.keras.layers.Layer):
     def __init__(self, filters):
