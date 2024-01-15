@@ -194,7 +194,7 @@ class DR_Generator(tf.keras.utils.Sequence):
             ma = ma.reshape(self.batch_size, *self.img_size, 1)
             se = se.reshape(self.batch_size, *self.img_size, 1)
             
-            return inputs, [inputs, ex, he, ma, se]
+            return inputs, [ex, he, ma, se]
         
     def on_epoch_end(self):
         # 한 epoch가 끝나면 실행되는 함수
