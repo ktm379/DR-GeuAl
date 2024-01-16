@@ -137,24 +137,24 @@ class DecoderBlock(tf.keras.layers.Layer):
         return x
       
 class SMD_Unet(tf.keras.Model):
-    def __init__(self, filters):
+    def __init__(self, enc_filters, dec_filters):
         super(SMD_Unet, self).__init__()
 
-        self.filters = filters
+        self.enc_filters = enc_filters
+        self.dec_filters = dec_filters
 
         # Encoder
-        self.encoder = EncoderBlock(self.filters)
+        self.encoder = EncoderBlock(self.enc_filters)
 
         # Decoder
         # 5종류의 decoder가 있음
         # reconstruction
         # HardExudate, Hemohedge, Microane, SoftExudates
-        self.reconstruction = DecoderBlock(self.filters[::-1][1:])
-        self.HardExudate = DecoderBlock(self.filters[::-1][1:])
-        self.Hemohedge = DecoderBlock(self.filters[::-1][1:])
-        self.Microane = DecoderBlock(self.filters[::-1][1:])
-        self.SoftExudates = DecoderBlock(self.filters[::-1][1:])
-
+        self.reconstruction = DecoderBlock(self.dec_filters)
+        self.HardExudate = DecoderBlock(self.dec_filters)
+        self.Hemohedge = DecoderBlock(self.dec_filters)
+        self.Microane = DecoderBlock(self.dec_filters)
+        self.SoftExudates = DecoderBlock(self.dec_filters)
 
     def call(self, inputs, only_recons=False):
         # Encoder
