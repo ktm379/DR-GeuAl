@@ -103,11 +103,13 @@ class Trainer:
         return train_loss
 
     def train(self, train_dataset, val_dataset):
-        metrics_names = ['train_loss', 'val_loss']
-
+        epochs = []
+        train_losses = []
+        val_losses = []
+        
         for epoch in range(self.epochs):
             print("\nEpoch {}/{}".format(epoch+1, self.epochs))
-
+            epochs.append(epoch)
             # train_dataset = train_dataset.take(steps_per_epoch)
             # val_dataset = val_dataset.take(val_step)
 
@@ -122,6 +124,8 @@ class Trainer:
 
                 values = [('train_loss', train_loss.numpy())]
                 tr_progBar.update((step_train + 1) * train_dataset.batch_size, values=values)
+                
+                train_losses.append(train_loss)
                 
                 del train_loss
                 del x_batch_train
@@ -153,7 +157,17 @@ class Trainer:
                 values = [('val_loss', val_loss.numpy())]
                 val_progBar.update((step_val + 1) * val_dataset.batch_size, values=values)
                 
+                val_losses.append(val_loss)
+                
                 del val_loss
                 del x_batch_val
                 del y_batch_val
                 del preds
+
+
+        history = {}
+        history['train_loss'] = train_losses
+        history['val_loss'] = val_losses
+        history['epochs'] = epochs
+        
+        return history
