@@ -69,9 +69,9 @@ class ConvBlock(tf.keras.layers.Layer):
     def __init__(self, n_filters):
         super(ConvBlock, self).__init__()
         self.filters = n_filters
-        self.conv = keras.layers.Conv2D(n_filters, 3, padding='same', activation='relu', kernel_initializer='he_normal')
+        self.conv = keras.layers.Conv2D(n_filters, 3, padding='same')
         self.bn = keras.layers.BatchNormalization()
-        self.relu = keras.layers.Activation('relu')
+        self.relu = keras.layers.Activation('relu') 
     
     def call(self, x):
         x = self.conv(x)
