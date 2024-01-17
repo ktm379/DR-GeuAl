@@ -46,6 +46,12 @@ class Trainer:
     # loss 함수 계산하는 부분 
     # return 값이 텐서여야 하는건가? -> 아마도 그런 것 같다.
     def dice_loss(self, inputs, targets, smooth = 1.):
+        # Apply thresholding
+        threshold = 0.5
+        inputs = tf.where(inputs >= threshold, 1.0, 0.0)
+        targets = tf.where(targets >= threshold, 1.0, 0.0)
+        
+        
         dice_losses = []
         
         for input, target in zip(inputs, targets): 
