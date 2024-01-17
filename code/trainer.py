@@ -92,20 +92,26 @@ class Trainer:
                 se_loss = self.dice_loss(y_batch_train[3], preds[4])            
                 # loss 가중합 해주기
                 train_loss = self.b1 * ex_loss + self.b2 * he_loss + self.b3 * ma_loss + self.b4 * se_loss + self.alpha * loss_recons
+                return_loss = (ex_loss, he_loss, ma_loss, se_loss, loss_recons, train_loss)
             else:     
                 train_loss = loss_recons 
+                return_loss = (loss_recons, train_loss)
             
         grads = tape.gradient(train_loss, self.model.trainable_weights)  # gradient 계산
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_weights))  # Otimizer에게 처리된 그라데이션 적용을 요청
         
         del preds
         
-        return train_loss
+        return return_loss
 
     def train(self, train_dataset, val_dataset):
         epochs = []
+        
         train_losses = []
+        tr_sub_losses = []
+        
         val_losses = []
+        val_sub_losses = []
         
         for epoch in range(self.epochs):
             print("\nEpoch {}/{}".format(epoch+1, self.epochs))
@@ -113,19 +119,24 @@ class Trainer:
             # train_dataset = train_dataset.take(steps_per_epoch)
             # val_dataset = val_dataset.take(val_step)
 
-            tr_progBar = Progbar(target=len(train_dataset) * train_dataset.batch_size, stateful_metrics=['train_loss'])
+            tr_progBar = Progbar(target=len(train_dataset) * train_dataset.batch_size, stateful_metrics=['train_loss', 'ex_loss', 'he_loss', 'ma_loss', 'se_loss', 'loss_recons'])
             
             # 데이터 집합의 배치에 대해 반복합니다
             for step_train, (x_batch_train, y_batch_train) in enumerate(train_dataset):
-                train_loss = self.train_on_batch(x_batch_train, y_batch_train)
-
-                # train metric(mean, auc, accuracy 등) 업데이트
-                # acc_metric.update_state(y_batch_train, logits)
-
-                values = [('train_loss', train_loss.numpy())]
+                if not self.for_recons:
+                    ex_loss, he_loss, ma_loss, se_loss, loss_recons, train_loss = self.train_on_batch(x_batch_train, y_batch_train)
+                    values = [('train_loss', train_loss.numpy()), ('ex_loss', ex_loss.numpy()), ('he_loss', he_loss.numpy()), ('ma_loss', ma_loss.numpy()), ('se_loss', se_loss.numpy()), ('loss_recons', loss_recons.numpy())]
+                    
+                    tr_sub_losses.append((ex_loss.numpy(), he_loss.numpy(), ma_loss.numpy(), se_loss.numpy(), loss_recons.numpy()))
+                else:
+                    loss_recons, train_loss = self.train_on_batch(x_batch_train, y_batch_train)
+                    values = [('train_loss', train_loss.numpy()), ('loss_recons', loss_recons.numpy())]
+                    
+                    tr_sub_losses.append((loss_recons.numpy()))
+     
                 tr_progBar.update((step_train + 1) * train_dataset.batch_size, values=values)
                 
-                train_losses.append(train_loss)
+                train_losses.append(train_loss.numpy())
                 
                 del train_loss
                 del x_batch_train
@@ -151,13 +162,18 @@ class Trainer:
                     se_loss = self.dice_loss(y_batch_val[3], preds[4])            
                     # loss 가중합 해주기
                     val_loss = self.b1 * ex_loss + self.b2 * he_loss + self.b3 * ma_loss + self.b4 * se_loss + self.alpha * loss_recons
+                    values = [('val_loss', val_loss.numpy()), ('ex_loss', ex_loss.numpy()), ('he_loss', he_loss.numpy()), ('ma_loss', ma_loss.numpy()), ('se_loss', se_loss.numpy()), ('loss_recons', loss_recons.numpy())]
+                    
+                    val_sub_losses.append((ex_loss.numpy(), he_loss.numpy(), ma_loss.numpy(), se_loss.numpy(), loss_recons.numpy()))
                 else:     
                     val_loss = loss_recons
+                    values = [('val_loss', val_loss.numpy()), ('loss_recons', loss_recons.numpy())]
                     
-                values = [('val_loss', val_loss.numpy())]
+                    val_sub_losses.append((loss_recons.numpy()))
+                    
                 val_progBar.update((step_val + 1) * val_dataset.batch_size, values=values)
                 
-                val_losses.append(val_loss)
+                val_losses.append(val_loss.numpy())
                 
                 del val_loss
                 del x_batch_val
