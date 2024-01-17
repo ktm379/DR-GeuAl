@@ -129,7 +129,7 @@ class DecoderBlock(tf.keras.layers.Layer):
         if is_recons:
             self.last_block = keras.layers.Conv2D(filters=1, kernel_size=1, padding='same', activation='linear')
         else:
-            self.last_block = keras.layers.Conv2D(filters=1, kernel_size=1, padding='same', activation='sigomid')
+            self.last_block = keras.layers.Conv2D(filters=1, kernel_size=1, padding='same', activation='sigmoid')
         
 
     def call(self, x, skips):
