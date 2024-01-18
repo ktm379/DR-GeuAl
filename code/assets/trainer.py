@@ -49,7 +49,7 @@ class Trainer:
         # Apply thresholding
         threshold = 0.5
         inputs = tf.where(inputs >= threshold, 1.0, 0.0)
-        targets = tf.where(targets >= threshold, 1.0, 0.0)
+        targets = tf.where(inputs >= threshold, 1.0, 0.0)
         
         
         dice_losses = []
