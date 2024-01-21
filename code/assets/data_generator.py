@@ -11,7 +11,7 @@ from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
 from tensorflow import keras
 
-from Preprocessing import preprocess_image
+from assets.Preprocessing import preprocess_image
 
 import matplotlib.pyplot as plt
 
@@ -140,11 +140,10 @@ class DR_Generator(tf.keras.utils.Sequence):
                 _se[_se != 1] = 0
                 
                 # ex[i] = _ex; he[i] = _he; ma[i] = _ma; se[i] = _se
-                
-                if _ex: mask[i] = _ex
-                if _he: mask[i] = _he
-                if _ma: mask[i] = _ma
-                if _se: mask[i] = _se
+                _mask = np.maximum(_ex, _he)
+                _mask = np.maximum(_mask, _ma)
+                _mask = np.maximum(_mask, _se)
+                mask[i] = _mask
                 
             else:
                 # mask 없음
