@@ -11,25 +11,9 @@ from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
 from tensorflow import keras
 
-# 이거 추가로 설치해줘야 됨
-# from skimage.io import imread
-# from skimage.transform import resize
-
-# 요거 사용해도 됨
-from tensorflow.keras.utils import load_img, img_to_array
-
-import cv2
-
-from Preprocessing import preprocess_image, crop_and_resize_image
+from Preprocessing import preprocess_image
 
 import matplotlib.pyplot as plt
-
-
-# RandomGenerator
-
-# RandomGenerator
-
-# RandomGenerator
 
 class DR_Generator(tf.keras.utils.Sequence):
     '''
@@ -131,48 +115,43 @@ class DR_Generator(tf.keras.utils.Sequence):
         inputs = np.zeros([self.batch_size, *self.img_size])
         
         if self.dataset == "FGADR":
-          # mask가 4개임 , HardExudate, Hemohedge, Microane, SoftExudates
-          ex = np.zeros([self.batch_size, *self.img_size])
-          he = np.zeros([self.batch_size, *self.img_size])
-          ma = np.zeros([self.batch_size, *self.img_size])
-          se = np.zeros([self.batch_size, *self.img_size])
+            # mask가 4개임 , HardExudate, Hemohedge, Microane, SoftExudates
+            # ex = np.zeros([self.batch_size, *self.img_size])
+            # he = np.zeros([self.batch_size, *self.img_size])
+            # ma = np.zeros([self.batch_size, *self.img_size])
+            # se = np.zeros([self.batch_size, *self.img_size])
+
+            mask = np.zeros([self.batch_size, *self.img_size])
         
         for i, data in enumerate(batch_data_paths):
             # supervsion 일때는 4개의 label
             # unsupervision 일때는 label이 image가 됨 
             if self.use_mask:
-              input_img_path, output_paths = data
-              
-              # mask : HardExudate, Hemohedge, Microane, SoftExudates
-              _ex = preprocess_image(output_paths[0], img_size=self.img_size, use_hist=True)
-              _ex[_ex!=0] = 255.0 # 0 or 255로 만들기
-              _ex = _ex / 255.0
-              ex[i] = _ex
-              
-              _he = preprocess_image(output_paths[1], img_size=self.img_size, use_hist=True)
-              _he[_he!=0] = 255 # 0 or 255로 만들기
-              _he = _he / 255.0
-              he[i] = _he
-              
-              _ma = preprocess_image(output_paths[2], img_size=self.img_size, use_hist=True)
-              _ma[_ma!=0] = 255 # 0 or 255로 만들기
-              _ma = _ma / 255.0
-              ma[i] = _ma
-              
-              _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=True)
-              _se[_se!=0] = 255 # 0 or 255로 만들기
-              _se = _se / 255.0
-              se[i] = _se
-              
+                input_img_path, output_paths = data
+
+                # mask : HardExudate, Hemohedge, Microane, SoftExudates
+                _ex = preprocess_image(output_paths[0], img_size=self.img_size, use_hist=True)
+                _ex[_ex != 1] = 0
+                _he = preprocess_image(output_paths[1], img_size=self.img_size, use_hist=True)
+                _he[_he != 1] = 0
+                _ma = preprocess_image(output_paths[2], img_size=self.img_size, use_hist=True)
+                _ma[_ma != 1] = 0
+                _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=True)
+                _se[_se != 1] = 0
+                
+                # ex[i] = _ex; he[i] = _he; ma[i] = _ma; se[i] = _se
+                
+                if _ex: mask[i] = _ex
+                if _he: mask[i] = _he
+                if _ma: mask[i] = _ma
+                if _se: mask[i] = _se
+                
             else:
-              # mask 없음
-              input_img_path,  = data
-              
+                # mask 없음
+                input_img_path,  = data
               
             # image
             _input = preprocess_image(input_img_path, img_size=self.img_size)
-            # scale 0~255로 바꿔주기
-            _input = _input / 255.0
                         
             inputs[i] = _input
             
@@ -182,19 +161,21 @@ class DR_Generator(tf.keras.utils.Sequence):
             
         # mask 없을 때는 input이 label이 됨
         if self.dataset == "EyePacks":
-            return inputs, inputs
+            return inputs, None
         
         # input, [mask 4개]
         if self.dataset == "FGADR":
             
             # shape 추가해주기
             # (batch, 512, 512) -> (batch, 512, 512, 1)
-            ex = ex.reshape(self.batch_size, *self.img_size, 1)
-            he = he.reshape(self.batch_size, *self.img_size, 1)
-            ma = ma.reshape(self.batch_size, *self.img_size, 1)
-            se = se.reshape(self.batch_size, *self.img_size, 1)
+            # ex = ex.reshape(self.batch_size, *self.img_size, 1)
+            # he = he.reshape(self.batch_size, *self.img_size, 1)
+            # ma = ma.reshape(self.batch_size, *self.img_size, 1)
+            # se = se.reshape(self.batch_size, *self.img_size, 1)
             
-            return inputs, [ex, he, ma, se]
+            mask = mask.reshape(self.batch_size, *self.img_size, 1)
+            
+            return inputs, mask
         
     def on_epoch_end(self):
         # 한 epoch가 끝나면 실행되는 함수

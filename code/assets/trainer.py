@@ -33,15 +33,17 @@ class Trainer:
         
         # reconstruction만 학습하는거면 안쓰는 decoder trainable=False로 해주기
         if self.for_recons:
-            self.model.HardExudate.trainable=False
-            self.model.Hemohedge.trainable=False
-            self.model.Microane.trainable=False
-            self.model.SoftExudates.trainable=False
+            # self.model.HardExudate.trainable=False
+            # self.model.Hemohedge.trainable=False
+            # self.model.Microane.trainable=False
+            # self.model.SoftExudates.trainable=False
+            self.models.decoder.trainable=False
         else:
-            self.model.HardExudate.trainable=True
-            self.model.Hemohedge.trainable=True
-            self.model.Microane.trainable=True
-            self.model.SoftExudates.trainable=True
+            # self.model.HardExudate.trainable=True
+            # self.model.Hemohedge.trainable=True
+            # self.model.Microane.trainable=True
+            # self.model.SoftExudates.trainable=True
+            self.models.decoder.trainable=True
 
     # loss 함수 계산하는 부분 
     # return 값이 텐서여야 하는건가? -> 아마도 그런 것 같다.
@@ -61,7 +63,7 @@ class Trainer:
             dice_losses.append(1. - dice_coef)
             
         result = tf.reduce_mean(dice_losses) 
-        return result
+        return tf.cast(result, dtype=tf.float64)
     
     def mean_square_error(self, input_hats, inputs):        
         mses = []
@@ -70,7 +72,7 @@ class Trainer:
             mses.append(tf.reduce_mean(tf.square(input_hat - input)))
             
         result = tf.reduce_mean(mses) # 배치 나눠서 계산하고 평균해주기
-        return result
+        return tf.cast(result, dtype=tf.float64)
 
     @tf.function
     def train_on_batch(self, x_batch_train, y_batch_train):
@@ -82,20 +84,26 @@ class Trainer:
             
             # loss 계산하기
             # reconstruction
-            loss_recons = tf.cast(self.mean_square_error(preds[0], x_batch_train), dtype=tf.float64)
+            loss_recons = self.mean_square_error(preds[0], x_batch_train)
 
             if not self.for_recons:
             # ex, he, ma, se
-                ex_loss = self.dice_loss(y_batch_train[0], preds[1])
-                he_loss = self.dice_loss(y_batch_train[1], preds[2])
-                ma_loss = self.dice_loss(y_batch_train[2], preds[3])
-                se_loss = self.dice_loss(y_batch_train[3], preds[4])            
+                # ex_loss = self.dice_loss(y_batch_train[0], preds[1])
+                # he_loss = self.dice_loss(y_batch_train[1], preds[2])
+                # ma_loss = self.dice_loss(y_batch_train[2], preds[3])
+                # se_loss = self.dice_loss(y_batch_train[3], preds[4])
+                
+                mask_loss = self.dice_loss(y_batch_train, preds[1])
+                
                 # loss 가중합 해주기
-                train_loss = self.b1 * ex_loss + self.b2 * he_loss + self.b3 * ma_loss + self.b4 * se_loss + self.alpha * loss_recons
-                return_loss = (ex_loss, he_loss, ma_loss, se_loss, loss_recons, train_loss)
+                # train_loss = self.b1 * ex_loss + self.b2 * he_loss + self.b3 * ma_loss + self.b4 * se_loss + self.alpha * loss_recons
+                # return_loss = (ex_loss, he_loss, ma_loss, se_loss, loss_recons, train_loss)
+                train_loss = self.alpha * loss_recons + (1-self.alpha) * mask_loss
+                return_loss = (loss_recons.numpy(), train_loss.numpy(), mask_loss.numpy())
+                
             else:     
                 train_loss = loss_recons 
-                return_loss = (loss_recons, train_loss)
+                return_loss = (loss_recons.numpy(), train_loss.numpy())
             
         grads = tape.gradient(train_loss, self.model.trainable_weights)  # gradient 계산
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_weights))  # Otimizer에게 처리된 그라데이션 적용을 요청
@@ -119,52 +127,53 @@ class Trainer:
             # train_dataset = train_dataset.take(steps_per_epoch)
             # val_dataset = val_dataset.take(val_step)
 
-            tr_progBar = Progbar(target=len(train_dataset) * train_dataset.batch_size, stateful_metrics=['train_loss', 'ex_loss', 'he_loss', 'ma_loss', 'se_loss', 'loss_recons'])
+            tr_progBar = Progbar(target=len(train_dataset) * train_dataset.batch_size, stateful_metrics=['train_loss', 'loss_recons', 'mask_loss'])
             
             # 데이터 집합의 배치에 대해 반복합니다
             for step_train, (x_batch_train, y_batch_train) in enumerate(train_dataset):
                 if not self.for_recons:
-                    ex_loss, he_loss, ma_loss, se_loss, loss_recons, train_loss = self.train_on_batch(x_batch_train, y_batch_train)
-                    values = [('train_loss', train_loss.numpy()), ('ex_loss', ex_loss.numpy()), ('he_loss', he_loss.numpy()), ('ma_loss', ma_loss.numpy()), ('se_loss', se_loss.numpy()), ('loss_recons', loss_recons.numpy())]
+                    loss_recons, train_loss, mask_loss = self.train_on_batch(x_batch_train, y_batch_train)
+                    values = [('train_loss', train_loss), ('mask_loss', mask_loss), ('loss_recons', loss_recons)]
                     
-                    tr_sub_losses.append((ex_loss.numpy(), he_loss.numpy(), ma_loss.numpy(), se_loss.numpy(), loss_recons.numpy()))
+                    tr_sub_losses.append((mask_loss, loss_recons))
                 else:
                     loss_recons, train_loss = self.train_on_batch(x_batch_train, y_batch_train)
-                    values = [('train_loss', train_loss.numpy()), ('loss_recons', loss_recons.numpy())]
+                    values = [('train_loss', train_loss), ('loss_recons', loss_recons)]
                     
-                    tr_sub_losses.append((loss_recons.numpy()))
+                    tr_sub_losses.append((loss_recons))
      
                 tr_progBar.update((step_train + 1) * train_dataset.batch_size, values=values)
                 
-                train_losses.append(train_loss.numpy())
+                train_losses.append(train_loss)
                 
                 del train_loss
                 del x_batch_train
                 del y_batch_train
             
-            val_progBar = Progbar(target=len(val_dataset) * val_dataset.batch_size, stateful_metrics=['val_loss'])
+            val_progBar = Progbar(target=len(val_dataset) * val_dataset.batch_size, stateful_metrics=['val_loss', 'loss_recons', 'mask_loss'])
             
             for step_val, (x_batch_val, y_batch_val) in enumerate(val_dataset):
-                preds = self.model(x_batch_val, only_recons=self.for_recons)    # 모델이 예측한 결과
-#                 input_hat, ex_hat, he_hat, ma_hat, se_hat = preds
-                
-#                 ex, he, ma, se = y_batch_val
+                # 모델이 예측한 결과
+                preds = self.model(x_batch_val, only_recons=self.for_recons)    
                 
                 # loss 계산하기
                 # reconstruction
-                loss_recons = tf.cast(self.mean_square_error(preds[0], x_batch_val), dtype=tf.float64)
+                loss_recons = self.mean_square_error(preds[0], x_batch_val)
                 
                 if not self.for_recons:
                 # ex, he, ma, se
-                    ex_loss = self.dice_loss(y_batch_val[0], preds[1])
-                    he_loss = self.dice_loss(y_batch_val[1], preds[2])
-                    ma_loss = self.dice_loss(y_batch_val[2], preds[3])
-                    se_loss = self.dice_loss(y_batch_val[3], preds[4])            
-                    # loss 가중합 해주기
-                    val_loss = self.b1 * ex_loss + self.b2 * he_loss + self.b3 * ma_loss + self.b4 * se_loss + self.alpha * loss_recons
-                    values = [('val_loss', val_loss.numpy()), ('ex_loss', ex_loss.numpy()), ('he_loss', he_loss.numpy()), ('ma_loss', ma_loss.numpy()), ('se_loss', se_loss.numpy()), ('loss_recons', loss_recons.numpy())]
+                    # ex_loss = self.dice_loss(y_batch_val[0], preds[1]).numpy()
+                    # he_loss = self.dice_loss(y_batch_val[1], preds[2]).numpy()
+                    # ma_loss = self.dice_loss(y_batch_val[2], preds[3]).numpy()
+                    # se_loss = self.dice_loss(y_batch_val[3], preds[4]).numpy()    
                     
-                    val_sub_losses.append((ex_loss.numpy(), he_loss.numpy(), ma_loss.numpy(), se_loss.numpy(), loss_recons.numpy()))
+                    mask_loss = self.dice_loss(y_batch_train, preds[1])
+                    
+                    # loss 가중합 해주기
+                    val_loss = self.alpha * loss_recons + (1-self.alpha) * mask_loss
+                    values = [('val_loss', val_loss.numpy()), ('loss_recons', loss_recons.numpy()), ('mask_loss', mask_loss.numpy())]
+                    
+                    val_sub_losses.append((loss_recons.numpy(), mask_loss.numpy()))
                 else:     
                     val_loss = loss_recons
                     values = [('val_loss', val_loss.numpy()), ('loss_recons', loss_recons.numpy())]

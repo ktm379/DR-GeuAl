@@ -33,9 +33,11 @@ def preprocess_image(image_path, img_size=(512, 512), use_hist=True):
       contrast_enhanced_image = clahe.apply(green_channel)
 
       cropped_image = crop_and_resize_image(contrast_enhanced_image, img_size)
-
-      return cropped_image
+      
     else:
       cropped_image = crop_and_resize_image(green_channel, img_size)
 
-      return cropped_image
+    # 0~1로 scale 맞추기
+    cropped_image = cropped_image / 255.0
+      
+    return cropped_image

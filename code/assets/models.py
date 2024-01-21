@@ -80,8 +80,6 @@ class ConvBlock(tf.keras.layers.Layer):
         
         return x
 
-    
-    
 class UpsampleBlock(tf.keras.layers.Layer):
     def __init__(self, n_filters):
         super(UpsampleBlock, self).__init__()
@@ -156,10 +154,11 @@ class SMD_Unet(tf.keras.Model):
         # reconstruction
         # HardExudate, Hemohedge, Microane, SoftExudates
         self.reconstruction = DecoderBlock(self.dec_filters, is_recons=True)
-        self.HardExudate = DecoderBlock(self.dec_filters)
-        self.Hemohedge = DecoderBlock(self.dec_filters)
-        self.Microane = DecoderBlock(self.dec_filters)
-        self.SoftExudates = DecoderBlock(self.dec_filters)
+        self.decoder= DecoderBlock(self.dec_filters)
+        # self.HardExudate = DecoderBlock(self.dec_filters)
+        # self.Hemohedge = DecoderBlock(self.dec_filters)
+        # self.Microane = DecoderBlock(self.dec_filters)
+        # self.SoftExudates = DecoderBlock(self.dec_filters)
 
     def call(self, inputs, only_recons=False):
         # Encoder
@@ -170,9 +169,11 @@ class SMD_Unet(tf.keras.Model):
         if only_recons:     
             return [input_hat]
         else:
-            ex = self.HardExudate(x, skips[::-1])
-            he = self.Hemohedge(x, skips[::-1])
-            ma = self.Microane(x, skips[::-1])
-            se = self.SoftExudates(x, skips[::-1])
+            # ex = self.HardExudate(x, skips[::-1])
+            # he = self.Hemohedge(x, skips[::-1])
+            # ma = self.Microane(x, skips[::-1])
+            # se = self.SoftExudates(x, skips[::-1])
             
-            return [input_hat, ex, he, ma, se]
+            mask_hat = self.decoder(x, skips[::-1])
+            
+            return [input_hat, mask_hat]
