@@ -144,22 +144,22 @@ class DR_Generator(tf.keras.utils.Sequence):
               input_img_path, output_paths = data
               
               # mask : HardExudate, Hemohedge, Microane, SoftExudates
-              _ex = preprocess_image(output_paths[0], img_size=self.img_size, use_hist=False)
+              _ex = preprocess_image(output_paths[0], img_size=self.img_size, use_hist=True)
               _ex[_ex!=0] = 255.0 # 0 or 255로 만들기
               _ex = _ex / 255.0
               ex[i] = _ex
               
-              _he = preprocess_image(output_paths[1], img_size=self.img_size, use_hist=False)
+              _he = preprocess_image(output_paths[1], img_size=self.img_size, use_hist=True)
               _he[_he!=0] = 255 # 0 or 255로 만들기
               _he = _he / 255.0
               he[i] = _he
               
-              _ma = preprocess_image(output_paths[2], img_size=self.img_size, use_hist=False)
+              _ma = preprocess_image(output_paths[2], img_size=self.img_size, use_hist=True)
               _ma[_ma!=0] = 255 # 0 or 255로 만들기
               _ma = _ma / 255.0
               ma[i] = _ma
               
-              _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=False)
+              _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=True)
               _se[_se!=0] = 255 # 0 or 255로 만들기
               _se = _se / 255.0
               se[i] = _se
