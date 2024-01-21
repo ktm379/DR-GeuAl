@@ -11,7 +11,7 @@ from assets.data_generator import DR_Generator
 tf.config.run_functions_eagerly(True)
 
 class Trainer:
-    def __init__(self, model, epochs, optimizer, for_recons, alpha, beta=None, first_epoch=1):
+    def __init__(self, model, epochs, optimizer, for_recons, alpha, beta=None, first_epoch=1, file_name=None):
         '''
         for_recons : bool, 학습 단계 구분하기 위함
         alpha : recons loss에 곱해줄 가중치
@@ -25,6 +25,7 @@ class Trainer:
         self.alpha = tf.cast(alpha, dtype=tf.float64)
         self.beta = beta 
         self.first_epoch = first_epoch
+        self.file_name = file_name
 
         if beta!=None:
             self.b1, self.b2, self.b3, self.b4 = beta
@@ -117,12 +118,6 @@ class Trainer:
     def train(self, train_dataset, val_dataset):
         epochs = []
         
-        train_losses = []
-        tr_sub_losses = []
-        
-        val_losses = []
-        val_sub_losses = []
-        
         for epoch in range(self.epochs):
             print("\nEpoch {}/{}".format(epoch+1, self.epochs))
             epochs.append(epoch)
@@ -168,6 +163,12 @@ class Trainer:
                 del train_loss
                 del x_batch_train
                 del y_batch_train
+            
+            # txt 파일에 기록하기
+            if self.file_name != None:
+                with open('file_name', 'a') as f:
+                    f.write(f"epoch:{epoch + self.first_epoch}/train_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}\n")  
+            
             
             # epoch 단위로 계산하기 위함
             mask_batch_loss = []
@@ -224,11 +225,10 @@ class Trainer:
                 del x_batch_val
                 del y_batch_val
                 del preds
-
-
-        history = {}
-        history['train_loss'] = train_losses
-        history['val_loss'] = val_losses
-        history['epochs'] = epochs
+            
+             # txt 파일에 기록하기
+            if self.file_name != None:
+                with open('file_name', 'a') as f:
+                    f.write(f"epoch:{epoch + self.first_epoch}/val_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}\n")
         
-        return history
+        return None
