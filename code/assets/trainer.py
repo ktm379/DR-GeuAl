@@ -166,7 +166,7 @@ class Trainer:
             
             # txt 파일에 기록하기
             if self.file_name != None:
-                with open('file_name', 'a') as f:
+                with open(self.file_name, 'a') as f:
                     f.write(f"epoch:{epoch + self.first_epoch}/train_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}\n")  
             
             
@@ -228,7 +228,7 @@ class Trainer:
             
              # txt 파일에 기록하기
             if self.file_name != None:
-                with open('file_name', 'a') as f:
+                with open(self.file_name, 'a') as f:
                     f.write(f"epoch:{epoch + self.first_epoch}/val_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}\n")
         
         return None
