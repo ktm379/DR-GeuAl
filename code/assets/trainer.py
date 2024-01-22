@@ -11,7 +11,7 @@ from assets.data_generator import DR_Generator
 tf.config.run_functions_eagerly(True)
 
 class Trainer:
-    def __init__(self, model, epochs, optimizer, for_recons, alpha, beta=None, first_epoch=1, file_name=None):
+    def __init__(self, model, epochs, optimizer, for_recons, alpha, beta=None, first_epoch=1, file_name=None, save_model_path=None):
         '''
         for_recons : bool, 학습 단계 구분하기 위함
         alpha : recons loss에 곱해줄 가중치
@@ -26,6 +26,7 @@ class Trainer:
         self.beta = beta 
         self.first_epoch = first_epoch
         self.file_name = file_name
+        self.save_model_path = save_model_path
 
         if beta!=None:
             self.b1, self.b2, self.b3, self.b4 = beta
@@ -230,5 +231,9 @@ class Trainer:
             if self.file_name != None:
                 with open(self.file_name, 'a') as f:
                     f.write(f"epoch:{epoch + self.first_epoch}/val_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}\n")
+        
+        # 학습한 모델 저장하기
+        if self.save_model_path != None:  
+            self.model.save_weights(self.save_model_path)
         
         return None
