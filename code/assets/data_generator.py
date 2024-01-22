@@ -28,7 +28,8 @@ class DR_Generator(tf.keras.utils.Sequence):
                dataset=None,
                start_end_index=None,
                is_train=True,
-               use_3channel=False):
+               use_3channel=False,
+               CLAHE_args=None):
         '''
         dir_path (str): image path
         mask_path ([str]): mask path , 순서는 HardExudate, Hemohedge, Microane, SoftExudates
@@ -47,6 +48,7 @@ class DR_Generator(tf.keras.utils.Sequence):
         self.start_end_index = start_end_index
         self.is_train=is_train
         self.use_3channel=use_3channel
+        self.CLA
         
 
         # load_dataset()을 통해서 directory path에서 라벨과 이미지를 확인
@@ -135,13 +137,13 @@ class DR_Generator(tf.keras.utils.Sequence):
                 input_img_path, output_paths = data
 
                 # mask : HardExudate, Hemohedge, Microane, SoftExudates
-                _ex = preprocess_image(output_paths[0], img_size=self.img_size, use_hist=True)
+                _ex = preprocess_image(output_paths[0], img_size=self.img_size, use_hist=False)
                 _ex[_ex != 1] = 0
-                _he = preprocess_image(output_paths[1], img_size=self.img_size, use_hist=True)
+                _he = preprocess_image(output_paths[1], img_size=self.img_size, use_hist=False)
                 _he[_he != 1] = 0
-                _ma = preprocess_image(output_paths[2], img_size=self.img_size, use_hist=True)
+                _ma = preprocess_image(output_paths[2], img_size=self.img_size, use_hist=False)
                 _ma[_ma != 1] = 0
-                _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=True)
+                _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=False)
                 _se[_se != 1] = 0
                 
                 # ex[i] = _ex; he[i] = _he; ma[i] = _ma; se[i] = _se
@@ -155,7 +157,7 @@ class DR_Generator(tf.keras.utils.Sequence):
                 input_img_path,  = data
               
             # image
-            _input = preprocess_image(input_img_path, img_size=self.img_size, use_3channel=self.use_3channel)
+            _input = preprocess_image(input_img_path, img_size=self.img_size, use_3channel=self.use_3channel, CLAHE_args=self.CLAHE_args, use_hist=True)
                         
             inputs[i] = _input
             

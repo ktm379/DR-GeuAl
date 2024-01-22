@@ -27,12 +27,16 @@ def crop_and_resize_image(image, img_size, use_3channel=False):
         
     return cropped_image
 
-def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channel=False):
+def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channel=False, CLAHE_args=None):
     '''
     image_path를 받아 이미지를 읽고, 
     각 채널에 대한 대비 향상, 
     크롭 및 크기 조정
     '''
+    if CLAHE_args != None:
+        clipLimit, tileGridSize = CLAHE_args
+    
+    
     original_image = cv2.imread(image_path)
 
     if use_3channel:
@@ -41,7 +45,7 @@ def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channe
 
         # 대비 향상 적용
         if use_hist:
-            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+            clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
             contrast_enhanced_channels = [clahe.apply(channel) for channel in channels]
 
             # 각 채널 합치기
