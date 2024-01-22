@@ -232,8 +232,8 @@ class Trainer:
                 with open(self.file_name, 'a') as f:
                     f.write(f"epoch:{epoch + self.first_epoch}/val_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}\n")
         
-        # 학습한 모델 저장하기
-        if self.save_model_path != None:  
-            self.model.save_weights(self.save_model_path)
+            # 학습한 모델 저장하기
+            if self.save_model_path != None:  
+                self.model.save_weights(self.save_model_path)
         
         return None

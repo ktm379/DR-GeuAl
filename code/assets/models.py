@@ -119,13 +119,13 @@ class EncoderBlock(tf.keras.layers.Layer):
         return x, skips
 
 class DecoderBlock(tf.keras.layers.Layer):
-    def __init__(self, filters, is_recons=False):
+    def __init__(self, filters, is_recons=False, input_channel=3):
         super(DecoderBlock, self).__init__()
         self.filters = filters # filters = [n_filters]
         self.upsample_blocks = [UpsampleBlock(f) for f in self.filters]
         self.last_conv = ConvBlock(2)
         if is_recons:
-            self.last_block = keras.layers.Conv2D(filters=1, kernel_size=1, padding='same', activation='linear')
+            self.last_block = keras.layers.Conv2D(filters=input_channel, kernel_size=1, padding='same', activation='linear')
         else:
             self.last_block = keras.layers.Conv2D(filters=1, kernel_size=1, padding='same', activation='sigmoid')
         
@@ -140,7 +140,7 @@ class DecoderBlock(tf.keras.layers.Layer):
         return x
       
 class SMD_Unet(tf.keras.Model):
-    def __init__(self, enc_filters, dec_filters):
+    def __init__(self, enc_filters, dec_filters, input_channel):
         super(SMD_Unet, self).__init__()
 
         self.enc_filters = enc_filters
@@ -153,7 +153,7 @@ class SMD_Unet(tf.keras.Model):
         # 5종류의 decoder가 있음
         # reconstruction
         # HardExudate, Hemohedge, Microane, SoftExudates
-        self.reconstruction = DecoderBlock(self.dec_filters, is_recons=True)
+        self.reconstruction = DecoderBlock(self.dec_filters, is_recons=True, input_channel=input_channel)
         self.decoder= DecoderBlock(self.dec_filters)
         # self.HardExudate = DecoderBlock(self.dec_filters)
         # self.Hemohedge = DecoderBlock(self.dec_filters)
