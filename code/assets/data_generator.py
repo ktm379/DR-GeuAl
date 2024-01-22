@@ -114,7 +114,10 @@ class DR_Generator(tf.keras.utils.Sequence):
                                ]
         
         # 채널 수 바꿔줘야 됨
-        inputs = np.zeros([self.batch_size, *self.img_size])
+        if self.use_3channel:
+            inputs = np.zeros([self.batch_size, *self.img_size, 3])
+        else:
+            inputs = np.zeros([self.batch_size, *self.img_size])
         
         if self.dataset == "FGADR":
             # mask가 4개임 , HardExudate, Hemohedge, Microane, SoftExudates
@@ -132,13 +135,13 @@ class DR_Generator(tf.keras.utils.Sequence):
                 input_img_path, output_paths = data
 
                 # mask : HardExudate, Hemohedge, Microane, SoftExudates
-                _ex = preprocess_image(output_paths[0], img_size=self.img_size, use_hist=True, use_3channel=self.use_3channel)
+                _ex = preprocess_image(output_paths[0], img_size=self.img_size, use_hist=True)
                 _ex[_ex != 1] = 0
-                _he = preprocess_image(output_paths[1], img_size=self.img_size, use_hist=True, use_3channel=self.use_3channel)
+                _he = preprocess_image(output_paths[1], img_size=self.img_size, use_hist=True)
                 _he[_he != 1] = 0
-                _ma = preprocess_image(output_paths[2], img_size=self.img_size, use_hist=True, use_3channel=self.use_3channel)
+                _ma = preprocess_image(output_paths[2], img_size=self.img_size, use_hist=True)
                 _ma[_ma != 1] = 0
-                _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=True, use_3channel=self.use_3channel)
+                _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=True)
                 _se[_se != 1] = 0
                 
                 # ex[i] = _ex; he[i] = _he; ma[i] = _ma; se[i] = _se
@@ -156,9 +159,11 @@ class DR_Generator(tf.keras.utils.Sequence):
                         
             inputs[i] = _input
             
-        # shape 추가해주기
-        # (batch, 512, 512) -> (batch, 512, 512, 1)
-        inputs = inputs.reshape(self.batch_size, *self.img_size, 1)
+         # shape 추가해주기
+         # (batch, 512, 512) -> (batch, 512, 512, 1)
+        # 3채널이 아닌 경우에는 shape 바꿔줘야됨. 안그러면 오류남.
+        if not self.use_3channel:
+            inputs = inputs.reshape(self.batch_size, *self.img_size, 1)
             
         # mask 없을 때는 input이 label이 됨
         if self.dataset == "EyePacks":
