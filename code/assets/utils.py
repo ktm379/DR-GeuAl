@@ -1,4 +1,4 @@
-
+import numpy as np
 
 # history/.txt로부터 history를 불러오는 함수
 def parse_history_text(path):    
@@ -49,3 +49,13 @@ def parse_history_text(path):
     history['val_recons_loss'] = val_recons_loss
     
     return history
+
+
+# gaussian noise를 추가하는 함수
+def add_gaussian_noise(image, sigma):
+    noise = np.random.normal(0, sigma, image.shape)
+    noisy_image = image + noise
+    noisy_image[noisy_image > 1] = 1
+    noisy_image[noisy_image < 0] = 0
+    
+    return noisy_image

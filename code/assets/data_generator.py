@@ -12,6 +12,7 @@ from tensorflow.keras.optimizers import *
 from tensorflow import keras
 
 from assets.Preprocessing import preprocess_image
+from assets.utils import add_gaussian_noise
 
 import matplotlib.pyplot as plt
 
@@ -29,7 +30,8 @@ class DR_Generator(tf.keras.utils.Sequence):
                start_end_index=None,
                is_train=True,
                use_3channel=False,
-               CLAHE_args=None):
+               CLAHE_args=None,
+               add_noise_std=None):
         '''
         dir_path (str): image path
         mask_path ([str]): mask path , 순서는 HardExudate, Hemohedge, Microane, SoftExudates
@@ -51,6 +53,7 @@ class DR_Generator(tf.keras.utils.Sequence):
         self.CLAHE_args = CLAHE_args
         if self.CLAHE_args == None:
             self.use_hist = False
+        self.add_noise_std = add_noise_std
         
 
         # load_dataset()을 통해서 directory path에서 라벨과 이미지를 확인
@@ -140,13 +143,13 @@ class DR_Generator(tf.keras.utils.Sequence):
 
                 # mask : HardExudate, Hemohedge, Microane, SoftExudates
                 _ex = preprocess_image(output_paths[0], img_size=self.img_size, use_hist=False)
-                _ex[_ex != 1] = 0
+                _ex[_ex != 0] = 1
                 _he = preprocess_image(output_paths[1], img_size=self.img_size, use_hist=False)
-                _he[_he != 1] = 0
+                _he[_he != 0] = 1
                 _ma = preprocess_image(output_paths[2], img_size=self.img_size, use_hist=False)
-                _ma[_ma != 1] = 0
+                _ma[_ma != 0] = 1
                 _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=False)
-                _se[_se != 1] = 0
+                _se[_se != 0] = 1
                 
                 # ex[i] = _ex; he[i] = _he; ma[i] = _ma; se[i] = _se
                 _mask = np.maximum(_ex, _he)
@@ -160,7 +163,10 @@ class DR_Generator(tf.keras.utils.Sequence):
               
             # image
             _input = preprocess_image(input_img_path, img_size=self.img_size, use_3channel=self.use_3channel, CLAHE_args=self.CLAHE_args, use_hist=self.use_hist)
-                        
+            
+            
+            
+               
             inputs[i] = _input
             
          # shape 추가해주기
@@ -169,8 +175,14 @@ class DR_Generator(tf.keras.utils.Sequence):
         if not self.use_3channel:
             inputs = inputs.reshape(self.batch_size, *self.img_size, 1)
             
+        if self.add_noise_std != None:
+            noisy_inputs = add_gaussian_noise(inputs, self.add_noise_std)
+        
         # mask 없을 때는 input이 label이 됨
         if self.dataset == "EyePacks":
+            if self.add_noise_std != None:
+                return [inputs, noisy_inputs], None
+
             return inputs, None
         
         # input, [mask 4개]
@@ -184,6 +196,9 @@ class DR_Generator(tf.keras.utils.Sequence):
             # se = se.reshape(self.batch_size, *self.img_size, 1)
             
             mask = mask.reshape(self.batch_size, *self.img_size, 1)
+            
+            if self.add_noise_std != None:
+                return [inputs, noisy_inputs], mask
             
             return inputs, mask
         
