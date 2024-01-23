@@ -123,7 +123,7 @@ class Trainer:
     def train(self, train_dataset, val_dataset):
         
         for epoch in range(self.epochs):
-            print("\nEpoch {}/{}".format(epoch+self.first_epoch, self.epochs+self.first_epoch))
+            print("\nEpoch {}/{}".format(epoch+self.first_epoch, self.epochs))
             # train_dataset = train_dataset.take(steps_per_epoch)
             # val_dataset = val_dataset.take(val_step)
 
