@@ -183,7 +183,7 @@ class DR_Generator(tf.keras.utils.Sequence):
             if self.add_noise_std != None:
                 return [inputs, noisy_inputs], None
 
-            return inputs, None
+            return [inputs], None
         
         # input, [mask 4개]
         if self.dataset == "FGADR":
@@ -200,7 +200,7 @@ class DR_Generator(tf.keras.utils.Sequence):
             if self.add_noise_std != None:
                 return [inputs, noisy_inputs], mask
             
-            return inputs, mask
+            return [inputs], mask
         
     def on_epoch_end(self):
         # 한 epoch가 끝나면 실행되는 함수
