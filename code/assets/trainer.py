@@ -117,11 +117,9 @@ class Trainer:
         return return_loss
 
     def train(self, train_dataset, val_dataset):
-        epochs = []
         
         for epoch in range(self.epochs):
-            print("\nEpoch {}/{}".format(epoch+1, self.epochs))
-            epochs.append(epoch)
+            print("\nEpoch {}/{}".format(epoch+self.first_epoch, self.epochs+self.first_epoch))
             # train_dataset = train_dataset.take(steps_per_epoch)
             # val_dataset = val_dataset.take(val_step)
 

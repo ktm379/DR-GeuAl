@@ -49,6 +49,8 @@ class DR_Generator(tf.keras.utils.Sequence):
         self.is_train=is_train
         self.use_3channel=use_3channel
         self.CLAHE_args = CLAHE_args
+        if self.CLAHE_args == None:
+            self.use_hist = False
         
 
         # load_dataset()을 통해서 directory path에서 라벨과 이미지를 확인
@@ -157,7 +159,7 @@ class DR_Generator(tf.keras.utils.Sequence):
                 input_img_path,  = data
               
             # image
-            _input = preprocess_image(input_img_path, img_size=self.img_size, use_3channel=self.use_3channel, CLAHE_args=self.CLAHE_args, use_hist=True)
+            _input = preprocess_image(input_img_path, img_size=self.img_size, use_3channel=self.use_3channel, CLAHE_args=self.CLAHE_args, use_hist=self.use_hist)
                         
             inputs[i] = _input
             
