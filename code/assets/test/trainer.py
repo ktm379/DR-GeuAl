@@ -1,5 +1,6 @@
 from tensorflow.keras.utils import Progbar
 import tensorflow as tf
+from tensorflow.keras import backend as K
 
 import math
 
@@ -52,23 +53,14 @@ class Trainer:
 
     # loss 함수 계산하는 부분 
     # return 값이 텐서여야 하는건가? -> 아마도 그런 것 같다.
-    def dice_loss(self, inputs, targets, smooth = 1.):
-        dice_losses = []
-        
-        for input, target in zip(inputs, targets): 
-            input_flat = tf.reshape(input, [-1])
-            target_flat = tf.reshape(target, [-1])
-            
-            input_flat = tf.cast(input_flat, dtype=tf.float64)
-            target_flat = tf.cast(target_flat, dtype=tf.float64) 
-            
-            intersection = tf.reduce_sum(input_flat * target_flat)
-            dice_coef = (2. * intersection + smooth) / (tf.reduce_sum(input_flat) + tf.reduce_sum(target_flat) + smooth)
-
-            dice_losses.append(1. - dice_coef)
-            
-        result = tf.reduce_mean(dice_losses) 
-        return tf.cast(result, dtype=tf.float64)
+    def dice_loss(self, y_true, y_pred, smooth=100.):
+        y_true = tf.cast(y_true, dtype=tf.float32)
+        y_true_f = K.flatten(y_true)
+        y_pred_f = K.flatten(y_pred)
+        intersection = K.sum(y_true_f * y_pred_f)
+        dice = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+        dice_loss = 1 - dice
+        return tf.cast(dice_loss, dtype=tf.float64)
     
     def mean_square_error(self, input_hats, inputs):        
         mses = []
@@ -121,10 +113,7 @@ class Trainer:
         return return_loss, grads
 
     def train(self, train_dataset, val_dataset):
-        grads_list = []
-        for epoch in range(self.epochs):
-            epoch_grads_list = []
-            
+        for epoch in range(self.epochs):            
             print("\nEpoch {}/{}".format(epoch+self.first_epoch, self.epochs))
             # train_dataset = train_dataset.take(steps_per_epoch)
             # val_dataset = val_dataset.take(val_step)
@@ -141,7 +130,6 @@ class Trainer:
             for step_train, (x_batch_train, y_batch_train) in enumerate(train_dataset):
                 if not self.for_recons:
                     return_loss, grads = self.train_on_batch(x_batch_train, y_batch_train)
-                    epoch_grads_list.append(grads)
                     loss_recons, train_loss, mask_loss = return_loss
                     values = [('train_loss', train_loss), ('mask_loss', mask_loss), ('loss_recons', loss_recons)]
                                         
@@ -177,7 +165,6 @@ class Trainer:
                 with open(self.file_name, 'a') as f:
                     f.write(f"epoch:{epoch + self.first_epoch}/train_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}\n")  
             
-            grads_list.append(epoch_grads_list)
             # epoch 단위로 계산하기 위함
             mask_batch_loss = []
             recons_batch_loss = []
@@ -246,4 +233,4 @@ class Trainer:
             if self.save_model_path != None:  
                 self.model.save_weights(self.save_model_path)
         
-        return grads_list
+        return grads
