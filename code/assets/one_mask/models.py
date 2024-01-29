@@ -80,6 +80,7 @@ class ConvBlock(tf.keras.layers.Layer):
         
         return x
 
+
 class UpsampleBlock(tf.keras.layers.Layer):
     def __init__(self, n_filters):
         super(UpsampleBlock, self).__init__()
@@ -97,32 +98,68 @@ class UpsampleBlock(tf.keras.layers.Layer):
 
         return x   
 
+
+
 class EncoderBlock(tf.keras.layers.Layer):
     def __init__(self, filters):
         super(EncoderBlock, self).__init__()
         self.filters = filters # filters = [n_filters]
-        self.conv_blocks = [(ConvBlock(f), ConvBlock(f)) for f in self.filters]
-        self.max_poolings = [keras.layers.MaxPooling2D(2) for _ in range(len(self.filters)-1)]
-        # conv_block, max_pooling 리스트 길이 맞춰주기 위한 트릭
-        self.max_poolings += [0]
-
+        # [64, 128, 256, 512, 1024]
+        self.conv_blocks_0_1 = ConvBlock(self.filters[0])
+        self.conv_blocks_0_2 = ConvBlock(self.filters[0])
+        self.conv_blocks_1_1 = ConvBlock(self.filters[1])
+        self.conv_blocks_1_2 = ConvBlock(self.filters[1])
+        self.conv_blocks_2_1 = ConvBlock(self.filters[2])
+        self.conv_blocks_2_2 = ConvBlock(self.filters[2])
+        self.conv_blocks_3_1 = ConvBlock(self.filters[3])
+        self.conv_blocks_3_2 = ConvBlock(self.filters[3])
+        self.conv_blocks_4_1 = ConvBlock(self.filters[4])
+        self.conv_blocks_4_2 = ConvBlock(self.filters[4])
+        
+        self.max_poolings_1 = keras.layers.MaxPooling2D(2)
+        self.max_poolings_2 = keras.layers.MaxPooling2D(2)
+        self.max_poolings_3 = keras.layers.MaxPooling2D(2)
+        self.max_poolings_4 = keras.layers.MaxPooling2D(2)
+        
     def call(self, x):
         skips = []
-        for conv_block, max_pooling in zip(self.conv_blocks, self.max_poolings):
-            x = conv_block[0](x)
-            x = conv_block[1](x)
+        
+        x = self.conv_blocks_0_1(x)
+        x = self.conv_blocks_0_2(x)
+        skips.append(x)
+        x = self.max_poolings_1(x)
+        
+        x = self.conv_blocks_1_1(x)
+        x = self.conv_blocks_1_2(x)
+        skips.append(x)
+        x = self.max_poolings_2(x)
+        
+        x = self.conv_blocks_2_1(x)
+        x = self.conv_blocks_2_2(x)
+        skips.append(x)
+        x = self.max_poolings_3(x)
+        
+        x = self.conv_blocks_3_1(x)
+        x = self.conv_blocks_3_2(x)
+        skips.append(x)
+        x = self.max_poolings_4(x)
+        
+        x = self.conv_blocks_4_1(x)
+        x = self.conv_blocks_4_2(x)
 
-            # 맨 마지막 층을 제외하고는 skip connection, downsampling을 진행
-            if conv_block[0].filters != self.filters[-1]:
-                skips.append(x)
-                x = max_pooling(x)
         return x, skips
 
 class DecoderBlock(tf.keras.layers.Layer):
     def __init__(self, filters, is_recons=False, input_channel=3):
         super(DecoderBlock, self).__init__()
         self.filters = filters # filters = [n_filters]
-        self.upsample_blocks = [UpsampleBlock(f) for f in self.filters]
+        # enc_filters = [64, 128, 256, 512, 1024]
+        # dec_filters = [512, 256, 128, 64]
+        self.upsample_blocks_0 = UpsampleBlock(self.filters[0])
+        self.upsample_blocks_1 = UpsampleBlock(self.filters[1])
+        self.upsample_blocks_2 = UpsampleBlock(self.filters[2])
+        self.upsample_blocks_3 = UpsampleBlock(self.filters[3])
+        
         self.last_conv = ConvBlock(2)
         if is_recons:
             self.last_block = keras.layers.Conv2D(filters=input_channel, 
@@ -137,8 +174,10 @@ class DecoderBlock(tf.keras.layers.Layer):
         
 
     def call(self, x, skips):
-        for skip, upsample_block in zip(skips, self.upsample_blocks):
-            x = upsample_block(x, skip)
+        x = self.upsample_blocks_0(x, skips[0])
+        x = self.upsample_blocks_1(x, skips[1])
+        x = self.upsample_blocks_2(x, skips[2])
+        x = self.upsample_blocks_3(x, skips[3])
         
         x = self.last_conv(x)
         x = self.last_block(x)
@@ -159,12 +198,17 @@ class SMD_Unet(tf.keras.Model):
         # 5종류의 decoder가 있음
         # reconstruction
         # HardExudate, Hemohedge, Microane, SoftExudates
-        self.reconstruction = DecoderBlock(self.dec_filters, is_recons=True, input_channel=input_channel)
-        self.decoder= DecoderBlock(self.dec_filters)
-        # self.HardExudate = DecoderBlock(self.dec_filters)
+         # self.HardExudate = DecoderBlock(self.dec_filters)
         # self.Hemohedge = DecoderBlock(self.dec_filters)
         # self.Microane = DecoderBlock(self.dec_filters)
         # self.SoftExudates = DecoderBlock(self.dec_filters)
+        
+        # 복원하기 위한 branch
+        self.reconstruction = DecoderBlock(self.dec_filters, is_recons=True, input_channel=input_channel)
+        
+        # 하나의 마스크로 합쳐서 예측
+        self.decoder= DecoderBlock(self.dec_filters)
+       
 
     def call(self, inputs, only_recons=False):
         # Encoder
