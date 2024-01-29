@@ -1,6 +1,8 @@
 from tensorflow.keras.utils import Progbar
 import tensorflow as tf
 from tensorflow.keras import backend as K
+from tensorflow import keras
+
 
 import math
 
@@ -29,6 +31,8 @@ class Trainer:
         self.file_name = file_name
         self.save_model_path = save_model_path
         self.add_noise = add_noise
+        
+        self.bce = keras.losses.BinaryCrossentropy()
 
         if beta!=None:
             self.b1, self.b2, self.b3, self.b4 = beta
@@ -53,14 +57,19 @@ class Trainer:
 
     # loss 함수 계산하는 부분 
     # return 값이 텐서여야 하는건가? -> 아마도 그런 것 같다.
-    def dice_loss(self, y_true, y_pred, smooth=100.):
+    def dice_coef(self, y_true, y_pred, smooth=1.): 
         y_true = tf.cast(y_true, dtype=tf.float32)
         y_true_f = K.flatten(y_true)
         y_pred_f = K.flatten(y_pred)
-        intersection = K.sum(y_true_f * y_pred_f)
-        dice = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+        intersection = tf.reduce_sum(y_true_f * y_pred_f)
+        dice_coef = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+
+        return tf.cast(dice_coef, dtype=tf.float64)
+
+    def dice_loss(self, y_true, y_pred, smooth=1.): 
+        dice = self.dice_coef(y_true, y_pred, smooth)
         dice_loss = 1 - dice
-        return tf.cast(dice_loss, dtype=tf.float64)
+        return dice_loss
     
     def mean_square_error(self, input_hats, inputs):        
         mses = []
@@ -93,8 +102,10 @@ class Trainer:
                 # ma_loss = self.dice_loss(y_batch_train[2], preds[3])
                 # se_loss = self.dice_loss(y_batch_train[3], preds[4])
                     
-                mask_loss = self.dice_loss(y_batch_train, preds[1])
+                dce = self.dice_coef(y_batch_train, preds[1])
+                bce = tf.cast(self.bce(np.where(y_batch_train==0, 1, 0), 1-preds[1]), dtype=tf.float64)
                 
+                mask_loss = bce - dce
                 # loss 가중합 해주기
                 # train_loss = self.b1 * ex_loss + self.b2 * he_loss + self.b3 * ma_loss + self.b4 * se_loss + self.alpha * loss_recons
                 # return_loss = (ex_loss, he_loss, ma_loss, se_loss, loss_recons, train_loss)
@@ -113,6 +124,9 @@ class Trainer:
         return return_loss, grads
 
     def train(self, train_dataset, val_dataset):
+        grads_list = []
+        
+        i = 0
         for epoch in range(self.epochs):            
             print("\nEpoch {}/{}".format(epoch+self.first_epoch, self.epochs))
             # train_dataset = train_dataset.take(steps_per_epoch)
@@ -130,6 +144,14 @@ class Trainer:
             for step_train, (x_batch_train, y_batch_train) in enumerate(train_dataset):
                 if not self.for_recons:
                     return_loss, grads = self.train_on_batch(x_batch_train, y_batch_train)
+#                     i += 1
+#                     if i > 10 and i <= 20:
+#                         grads_list.append(grads)
+
+                    
+#                     if i == 15:
+#                         return grads_list
+#                     del grads 
                     loss_recons, train_loss, mask_loss = return_loss
                     values = [('train_loss', train_loss), ('mask_loss', mask_loss), ('loss_recons', loss_recons)]
                                         

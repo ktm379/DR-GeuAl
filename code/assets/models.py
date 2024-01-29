@@ -125,9 +125,15 @@ class DecoderBlock(tf.keras.layers.Layer):
         self.upsample_blocks = [UpsampleBlock(f) for f in self.filters]
         self.last_conv = ConvBlock(2)
         if is_recons:
-            self.last_block = keras.layers.Conv2D(filters=input_channel, kernel_size=1, padding='same', activation='linear')
+            self.last_block = keras.layers.Conv2D(filters=input_channel, 
+                                                  kernel_size=1, 
+                                                  padding='same', 
+                                                  activation='linear')
         else:
-            self.last_block = keras.layers.Conv2D(filters=1, kernel_size=1, padding='same', activation='sigmoid')
+            self.last_block = keras.layers.Conv2D(filters=1, 
+                                                  kernel_size=1, 
+                                                  padding='same', 
+                                                  activation='sigmoid')
         
 
     def call(self, x, skips):

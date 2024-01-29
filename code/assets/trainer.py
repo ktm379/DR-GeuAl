@@ -11,7 +11,17 @@ from assets.data_generator import DR_Generator
 tf.config.run_functions_eagerly(True)
 
 class Trainer:
-    def __init__(self, model, epochs, optimizer, for_recons, alpha, beta=None, first_epoch=1, file_name=None, save_model_path=None, add_noise=False):
+    def __init__(self, 
+                 model, 
+                 epochs, 
+                 optimizer, 
+                 for_recons,
+                 alpha, 
+                 beta=None, 
+                 first_epoch=1, 
+                 file_name=None, 
+                 save_model_path=None, 
+                 add_noise=False):
         '''
         for_recons : bool, 학습 단계 구분하기 위함
         alpha : recons loss에 곱해줄 가중치
