@@ -246,6 +246,6 @@ class Trainer:
         
             # 학습한 모델 저장하기
             if self.save_model_path != None:  
-                self.model.save_weights(f"{self.save_model_path}/{epoch}")
+                self.model.save_weights(f"{self.save_model_path}/{epoch+self.first_epoch}")
         
         return None
