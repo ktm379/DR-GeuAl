@@ -1,12 +1,11 @@
 from tensorflow.keras.utils import Progbar
 import tensorflow as tf
-
+from tensorflow.keras import backend as K
+import numpy as np
 import math
 
-from assets.models import SMD_Unet
-
-import numpy as np
-from assets.data_generator import DR_Generator
+from assets.one_mask.models import SMD_Unet
+from assets.one_mask.data_generator import DR_Generator
 
 tf.config.run_functions_eagerly(True)
 
@@ -32,19 +31,19 @@ class Trainer:
         self.epochs = epochs
         self.optimizer = optimizer
         self.for_recons = for_recons
-        self.alpha = tf.cast(alpha, dtype=tf.float64)
+        self.alpha = tf.cast(alpha, dtype=tf.float32)
         self.beta = beta 
         self.first_epoch = first_epoch
         self.file_name = file_name
         self.save_model_path = save_model_path
         self.add_noise = add_noise
-
+        
         if beta!=None:
             self.b1, self.b2, self.b3, self.b4 = beta
-            self.b1 = tf.cast(self.b1, dtype=tf.float64)
-            self.b2 = tf.cast(self.b2, dtype=tf.float64)
-            self.b3 = tf.cast(self.b3, dtype=tf.float64)
-            self.b4 = tf.cast(self.b4, dtype=tf.float64)
+            self.b1 = tf.cast(self.b1, dtype=tf.float32)
+            self.b2 = tf.cast(self.b2, dtype=tf.float32)
+            self.b3 = tf.cast(self.b3, dtype=tf.float32)
+            self.b4 = tf.cast(self.b4, dtype=tf.float32)
         
         # reconstruction만 학습하는거면 안쓰는 decoder trainable=False로 해주기
         if self.for_recons:
@@ -59,43 +58,38 @@ class Trainer:
             # self.model.Microane.trainable=True
             # self.model.SoftExudates.trainable=True
             self.model.decoder.trainable=True
+            
+        if self.alpha == 0.0:
+            self.model.reconstruction.trainable=False
 
     # loss 함수 계산하는 부분 
     # return 값이 텐서여야 하는건가? -> 아마도 그런 것 같다.
-    def dice_loss(self, inputs, targets, smooth = 1.):
-        dice_losses = []
-        
-        for input, target in zip(inputs, targets): 
-            input_flat = tf.reshape(input, [-1])
-            target_flat = tf.reshape(target, [-1])
-            
-            input_flat = tf.cast(input_flat, dtype=tf.float64)
-            target_flat = tf.cast(target_flat, dtype=tf.float64) 
-            
-            intersection = tf.reduce_sum(input_flat * target_flat)
-            dice_coef = (2. * intersection + smooth) / (tf.reduce_sum(input_flat) + tf.reduce_sum(target_flat) + smooth)
+    def dice_coef(self, y_true, y_pred, smooth=1.0):
+        y_true_f = K.flatten(y_true)
+        y_pred_f = K.flatten(y_pred)
+        intersection = K.sum(y_true_f * y_pred_f)
+        dice = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+        return dice
 
-            dice_losses.append(1. - dice_coef)
-            
-        result = tf.reduce_mean(dice_losses) 
-        return tf.cast(result, dtype=tf.float64)
-    
+    def dice_loss(self, y_true, y_pred):
+        return 1 - self.dice_coef(y_true, y_pred)
+
     def mean_square_error(self, input_hats, inputs):        
         mses = []
-        
+
         for input_hat, input in zip(input_hats, inputs):
             mses.append(tf.reduce_mean(tf.square(input_hat - input)))
-            
+
         result = tf.reduce_mean(mses) # 배치 나눠서 계산하고 평균해주기
-        return tf.cast(result, dtype=tf.float64)
+        return result
 
     @tf.function
     def train_on_batch(self, x_batch_train, y_batch_train):
         with tf.GradientTape() as tape:
             if self.add_noise:
-                preds = self.model(x_batch_train[1], only_recons=self.for_recons)
+                preds = self.model(x_batch_train[1], only_recons=self.for_recons, training=True)
             else:
-                preds = self.model(x_batch_train[0], only_recons=self.for_recons)    # 모델이 예측한 결과
+                preds = self.model(x_batch_train[0], only_recons=self.for_recons, training=True)    # 모델이 예측한 결과
 #             input_hat, ex_hat, he_hat, ma_hat, se_hat = preds
             
 #             ex, he, ma, se = y_batch_train
@@ -116,7 +110,10 @@ class Trainer:
                 # loss 가중합 해주기
                 # train_loss = self.b1 * ex_loss + self.b2 * he_loss + self.b3 * ma_loss + self.b4 * se_loss + self.alpha * loss_recons
                 # return_loss = (ex_loss, he_loss, ma_loss, se_loss, loss_recons, train_loss)
-                train_loss = self.alpha * loss_recons + (1-self.alpha) * mask_loss
+                if self.alpha == 0.0:
+                    train_loss = mask_loss
+                else:
+                    train_loss = self.alpha * loss_recons + (1-self.alpha) * mask_loss
                 return_loss = (loss_recons.numpy(), train_loss.numpy(), mask_loss.numpy())
                 
             else:     
@@ -193,9 +190,9 @@ class Trainer:
             for step_val, (x_batch_val, y_batch_val) in enumerate(val_dataset):
                 # 모델이 예측한 결과
                 if self.add_noise:
-                    preds = self.model(x_batch_val[1], only_recons=self.for_recons)
+                    preds = self.model(x_batch_val[1], only_recons=self.for_recons, training=False)
                 else:
-                    preds = self.model(x_batch_val[0], only_recons=self.for_recons)    
+                    preds = self.model(x_batch_val[0], only_recons=self.for_recons, training=False)    
                 
                 # loss 계산하기
                 # reconstruction
@@ -249,6 +246,6 @@ class Trainer:
         
             # 학습한 모델 저장하기
             if self.save_model_path != None:  
-                self.model.save_weights(self.save_model_path)
+                self.model.save_weights(f"{self.save_model_path}/{epoch}")
         
         return None

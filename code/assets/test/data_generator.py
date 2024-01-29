@@ -11,8 +11,8 @@ from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
 from tensorflow import keras
 
-from assets.Preprocessing import preprocess_image
-from assets.utils import add_gaussian_noise
+from assets.one_mask.Preprocessing import preprocess_image
+from assets.one_mask.utils import add_gaussian_noise
 
 import matplotlib.pyplot as plt
 
@@ -163,25 +163,19 @@ class DR_Generator(tf.keras.utils.Sequence):
               
             # image
             _input = preprocess_image(input_img_path, img_size=self.img_size, use_3channel=self.use_3channel, CLAHE_args=self.CLAHE_args, use_hist=self.use_hist)
-            
-            
-            
                
             inputs[i] = _input
-           
+            
+         # shape 추가해주기
+         # (batch, 512, 512) -> (batch, 512, 512, 1)
+        # 3채널이 아닌 경우에는 shape 바꿔줘야됨. 안그러면 오류남.
+        if not self.use_3channel:
+            inputs = inputs.reshape(self.batch_size, *self.img_size, 1)
         
-        if self.dataset == "FGADR":
+        inputs = tf.cast(inputs, dtype=tf.float32)
+        mask = tf.cast(mask, dtype=tf.float32)
             
-            # shape 추가해주기
-            # (batch, 512, 512) -> (batch, 512, 512, 1)
-            # ex = ex.reshape(self.batch_size, *self.img_size, 1)
-            # he = he.reshape(self.batch_size, *self.img_size, 1)
-            # ma = ma.reshape(self.batch_size, *self.img_size, 1)
-            # se = se.reshape(self.batch_size, *self.img_size, 1)
-            
-            mask = mask.reshape(self.batch_size, *self.img_size, 1)     
-            
-            return inputs, mask
+        return inputs, mask
         
     def on_epoch_end(self):
         # 한 epoch가 끝나면 실행되는 함수

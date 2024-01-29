@@ -11,8 +11,8 @@ from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
 from tensorflow import keras
 
-from assets.Preprocessing import preprocess_image
-from assets.utils import add_gaussian_noise
+from assets.one_mask.Preprocessing import preprocess_image
+from assets.one_mask.utils import add_gaussian_noise
 
 import matplotlib.pyplot as plt
 
@@ -76,29 +76,29 @@ class DR_Generator(tf.keras.utils.Sequence):
         # mask path 지정
         # mask : HardExudate, Hemohedge, Microane, SoftExudates
         if self.use_mask:
-          ex_file_list = os.listdir(self.mask_path[0])
-          ex_paths = [os.path.join(self.mask_path[0], file) for file in ex_file_list]
-          ex_paths.sort()
-          
-          he_file_list = os.listdir(self.mask_path[1])
-          he_paths = [os.path.join(self.mask_path[1], file) for file in he_file_list]
-          he_paths.sort()
-          
-          me_file_list = os.listdir(self.mask_path[2])
-          me_paths = [os.path.join(self.mask_path[2], file) for file in me_file_list]
-          me_paths.sort()
-          
-          se_file_list = os.listdir(self.mask_path[3])
-          se_paths = [os.path.join(self.mask_path[3], file) for file in se_file_list]
-          se_paths.sort()
-          
-          mask_images_paths = [ _ for _ in zip(ex_paths, he_paths, me_paths, se_paths)]
-          
-          # image와 label 길이가 같은지 확인
-          assert len(input_images_paths) == len(mask_images_paths)
-        
-          # path 합치기
-          data_paths = [ _ for _ in zip(input_images_paths, mask_images_paths)]
+            ex_file_list = os.listdir(self.mask_path[0])
+            ex_paths = [os.path.join(self.mask_path[0], file) for file in ex_file_list]
+            ex_paths.sort()
+
+            he_file_list = os.listdir(self.mask_path[1])
+            he_paths = [os.path.join(self.mask_path[1], file) for file in he_file_list]
+            he_paths.sort()
+
+            me_file_list = os.listdir(self.mask_path[2])
+            me_paths = [os.path.join(self.mask_path[2], file) for file in me_file_list]
+            me_paths.sort()
+
+            se_file_list = os.listdir(self.mask_path[3])
+            se_paths = [os.path.join(self.mask_path[3], file) for file in se_file_list]
+            se_paths.sort()
+
+            mask_images_paths = [ _ for _ in zip(ex_paths, he_paths, me_paths, se_paths)]
+
+            # image와 label 길이가 같은지 확인
+            assert len(input_images_paths) == len(mask_images_paths)
+
+            # path 합치기
+            data_paths = [ _ for _ in zip(input_images_paths, mask_images_paths)]
         
         else:
           # unsupervsion 떄는 필요없음
@@ -162,15 +162,17 @@ class DR_Generator(tf.keras.utils.Sequence):
                 input_img_path,  = data
               
             # image
-            _input = preprocess_image(input_img_path, img_size=self.img_size, use_3channel=self.use_3channel, CLAHE_args=self.CLAHE_args, use_hist=self.use_hist)
-            
-            
-            
-               
+            _input = preprocess_image(input_img_path, 
+                                      img_size=self.img_size, 
+                                      use_3channel=self.use_3channel, 
+                                      CLAHE_args=self.CLAHE_args, 
+                                      use_hist=self.use_hist)
+   
             inputs[i] = _input
+
             
-         # shape 추가해주기
-         # (batch, 512, 512) -> (batch, 512, 512, 1)
+        # shape 추가해주기
+        # (batch, 512, 512) -> (batch, 512, 512, 1)
         # 3채널이 아닌 경우에는 shape 바꿔줘야됨. 안그러면 오류남.
         if not self.use_3channel:
             inputs = inputs.reshape(self.batch_size, *self.img_size, 1)
@@ -181,9 +183,9 @@ class DR_Generator(tf.keras.utils.Sequence):
         # mask 없을 때는 input이 label이 됨
         if self.dataset == "EyePacks":
             if self.add_noise_std != None:
-                return [inputs, noisy_inputs], None
+                return [tf.cast(inputs, dtype=tf.float32), tf.cast(noisy_inputs, dtype=tf.float32)], None
 
-            return [inputs], None
+            return [tf.cast(inputs, dtype=tf.float32)], None
         
         # input, [mask 4개]
         if self.dataset == "FGADR":
@@ -198,9 +200,9 @@ class DR_Generator(tf.keras.utils.Sequence):
             mask = mask.reshape(self.batch_size, *self.img_size, 1)
             
             if self.add_noise_std != None:
-                return [inputs, noisy_inputs], mask
+                return [tf.cast(inputs, dtype=tf.float32), tf.cast(noisy_inputs, dtype=tf.float32)], tf.cast(mask, dtype=tf.float32)
             
-            return [inputs], mask
+            return [tf.cast(inputs, dtype=tf.float32)], tf.cast(mask, dtype=tf.float32)
         
     def on_epoch_end(self):
         # 한 epoch가 끝나면 실행되는 함수
