@@ -47,17 +47,15 @@ class Trainer:
         
         # reconstruction만 학습하는거면 안쓰는 decoder trainable=False로 해주기
         if self.for_recons:
-            # self.model.HardExudate.trainable=False
-            # self.model.Hemohedge.trainable=False
-            # self.model.Microane.trainable=False
-            # self.model.SoftExudates.trainable=False
-            self.model.decoder.trainable=False
+            self.model.HardExudate.trainable=False
+            self.model.Hemohedge.trainable=False
+            self.model.Microane.trainable=False
+            self.model.SoftExudates.trainable=False
         else:
-            # self.model.HardExudate.trainable=True
-            # self.model.Hemohedge.trainable=True
-            # self.model.Microane.trainable=True
-            # self.model.SoftExudates.trainable=True
-            self.model.decoder.trainable=True
+            self.model.HardExudate.trainable=True
+            self.model.Hemohedge.trainable=True
+            self.model.Microane.trainable=True
+            self.model.SoftExudates.trainable=True
             
         if self.alpha == 0.0:
             self.model.reconstruction.trainable=False
@@ -237,7 +235,7 @@ class Trainer:
                     
                     # loss 가중합 해주기
                     val_loss = self.alpha * loss_recons + (1 - self.alpha) * mask_loss
-                    values = [('val_loss', train_loss), ('mask_loss', mask_loss), ('loss_recons', loss_recons), ('ex_loss', ex_loss), ('he_loss', he_loss), ('ma_loss', ma_loss), ('se_loss', se_loss)]
+                    values = [('val_loss', val_loss), ('mask_loss', mask_loss), ('loss_recons', loss_recons), ('ex_loss', ex_loss), ('he_loss', he_loss), ('ma_loss', ma_loss), ('se_loss', se_loss)]
                                         
                     mask_batch_loss.append(mask_loss.numpy())
                     recons_batch_loss.append(loss_recons.numpy())
