@@ -69,7 +69,7 @@ class DR_Generator(tf.keras.utils.Sequence):
 
 
     def get_label(self, file_name):
-        return self.label_df[self.label_df['file_name'] == file_name][1].values[0]
+        return int(self.label_df[self.label_df['file_name'] == file_name][1].values[0])
 
 
     def load_dataset(self):
@@ -223,7 +223,9 @@ class DR_Generator(tf.keras.utils.Sequence):
                 return [tf.cast(inputs, dtype=tf.float32), tf.cast(noisy_inputs, dtype=tf.float32)], [tf.cast(mask, dtype=tf.float32)]
             
             if self.withCls:
-                return [tf.cast(inputs, dtype=tf.float32)], [tf.cast(mask, dtype=tf.float32), label]
+                label = label.reshape(self.batch_size, 1)
+                
+                return [tf.cast(inputs, dtype=tf.float32)], [tf.cast(mask, dtype=tf.float32), tf.cast(label, dtype=tf.int32)]
             
             return [tf.cast(inputs, dtype=tf.float32)], [tf.cast(mask, dtype=tf.float32)]
         

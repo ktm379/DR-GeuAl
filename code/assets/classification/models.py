@@ -162,13 +162,14 @@ class ClsBlock(tf.keras.layers.Layer):
         self.concat_1 = keras.layers.Concatenate()
         self.concat_2 = keras.layers.Concatenate()
         self.concat_3 = keras.layers.Concatenate()
+        self.concat_4 = keras.layers.Concatenate()
         
         self.gap = keras.layers.GlobalAveragePooling2D()
         
-        self.dense = keras.layers.Dense(1, activation='sigmoid')
+        self.dense = keras.layers.Dense(5, activation='softmax')
         
-    def call(self, x, skips):         
-        x = self.conv_blocks_0_1(x)
+    def call(self, inputs, skips, encoded_x):         
+        x = self.conv_blocks_0_1(inputs)
         x = self.concat_0([x, skips[0]])
         x = self.conv_blocks_0_2(x) 
         x = self.max_poolings_1(x)
@@ -190,6 +191,8 @@ class ClsBlock(tf.keras.layers.Layer):
         
         x = self.conv_blocks_4_1(x)
         x = self.conv_blocks_4_2(x)
+        
+        x = self.concat_4([x, encoded_x])
         
         x = self.gap(x)
         
@@ -231,8 +234,7 @@ class SnC_Unet(tf.keras.Model):
         x, skips = self.encoder(inputs)
         
         # Classification
-        cls_pred = self.clsblock(inputs, skips)
-        
+        cls_pred = self.clsblock(inputs, skips, x)
         
         # Decoder
         if only_cls:
