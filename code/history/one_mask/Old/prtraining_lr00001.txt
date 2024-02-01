@@ -1,0 +1,2 @@
+epoch:1/train_loss:0.007046811282634735/mask_loss:nan/recons_loss:0.007046811282634735
+epoch:1/val_loss:0.00011068760795751587/mask_loss:nan/recons_loss:0.00011068760795751587
