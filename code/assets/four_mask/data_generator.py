@@ -4,8 +4,6 @@ import math
 import numpy as np
 import glob
 
-from PIL import Image
-
 from tensorflow.keras.models import *
 from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
