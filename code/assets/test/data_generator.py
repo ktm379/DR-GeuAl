@@ -180,7 +180,7 @@ class DR_Generator_forInference(tf.keras.utils.Sequence):
         inputs = tf.cast(inputs, dtype=tf.float32)
         mask = tf.cast(mask, dtype=tf.float32)
             
-        return [inputs, image_name], mask
+        return [inputs, image_names], mask
         
     def on_epoch_end(self):
         # 한 epoch가 끝나면 실행되는 함수
