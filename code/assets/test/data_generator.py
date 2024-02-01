@@ -16,7 +16,7 @@ from assets.one_mask.utils import add_gaussian_noise
 
 import matplotlib.pyplot as plt
 
-class DR_Generator(tf.keras.utils.Sequence):
+class DR_Generator_forInference(tf.keras.utils.Sequence):
     '''
     tf.keras.utils.Sequence를 상속받아 Sequence를 커스텀해 사용
     '''
@@ -126,6 +126,8 @@ class DR_Generator(tf.keras.utils.Sequence):
         else:
             inputs = np.zeros([self.batch_size, *self.img_size])
         
+        image_names = []    
+    
         if self.dataset == "FGADR":
             # mask가 4개임 , HardExudate, Hemohedge, Microane, SoftExudates
             # ex = np.zeros([self.batch_size, *self.img_size])
@@ -151,6 +153,9 @@ class DR_Generator(tf.keras.utils.Sequence):
                 _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=False)
                 _se[_se != 0] = 1
                 
+                image_name = input_img_path.split('/')[-1]
+                image_names.append(image_name)
+                
                 # ex[i] = _ex; he[i] = _he; ma[i] = _ma; se[i] = _se
                 _mask = np.maximum(_ex, _he)
                 _mask = np.maximum(_mask, _ma)
@@ -175,7 +180,7 @@ class DR_Generator(tf.keras.utils.Sequence):
         inputs = tf.cast(inputs, dtype=tf.float32)
         mask = tf.cast(mask, dtype=tf.float32)
             
-        return inputs, mask
+        return [inputs, image_name], mask
         
     def on_epoch_end(self):
         # 한 epoch가 끝나면 실행되는 함수
