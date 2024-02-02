@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 from assets.one_mask.Preprocessing import preprocess_image
 from assets.one_mask.models import SMD_Unet
 
+# GPU 사용하지 않도록 설정
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 def load_and_resize_images(image_path, use_3channel=True, use_hist=False):
     image = preprocess_image(image_path, 
                             img_size=(512, 512), 
@@ -24,7 +27,7 @@ def apply_color_to_mask(mask, color):
 
 def combine_masks(mask_ex, mask_he, mask_ma, mask_se):
     # 각 마스크를 색상으로 변환
-    mask_ex_color = apply_color_to_mask(mask_ex, [255, 0, 0])  # 빨간색
+    mask_ex_color = apply_color_to_mask(mask_ex, [76, 0, 153])  # 빨간색
     mask_he_color = apply_color_to_mask(mask_he, [0, 0, 255])  # 파란색
     mask_ma_color = apply_color_to_mask(mask_ma, [255, 255, 0])  # 노란색
     mask_se_color = apply_color_to_mask(mask_se, [0, 255, 0])  # 초록색
@@ -34,52 +37,64 @@ def combine_masks(mask_ex, mask_he, mask_ma, mask_se):
     combined_mask[combined_mask > 255] = 255  # 최대값을 255로 제한
     return combined_mask
 
-def visualize_segmentation(image, mask_ex, mask_he, mask_ma, mask_se, mask_true, mask_pred):
+def extract_mask_boundary(mask):
+    # 이진화된 마스크를 uint8 데이터 타입으로 변환
+    mask = mask.astype(np.uint8)
+
+    # 침식 연산을 위한 커널 생성
+    kernel = np.ones((3, 3), np.uint8)
+
+    # 침식 연산을 통해 내부를 제외한 테두리만 얻음
+    eroded = cv2.erode(mask, kernel, iterations=8)
+
+    # 테두리와 원본 마스크의 차이를 계산하여 테두리 부분 추출
+    boundary = mask - eroded
+
+    return boundary
+
+def visualize_segmentation(image, mask_ex, mask_he, mask_ma, mask_se, mask_true, mask_pred, image_filename):
     plt.figure(figsize=(18, 12))
 
     # 원본 이미지
     plt.subplot(2, 5, 1)
-    # 이미지 데이터를 0에서 255 사이의 정수 값으로 스케일링
     scaled_image = (image * 255).astype(np.uint8)
-    # 이미지의 채널 순서 변경 (BGR -> RGB)
     rgb_image = cv2.cvtColor(scaled_image, cv2.COLOR_BGR2RGB)
     plt.imshow(rgb_image)
-    plt.title('Original Image')
+    plt.title('Original Image\n{}'.format(os.path.basename(image_filename)))
     plt.axis('off')
 
     # Ex 마스크 출력 (빨간색)
     plt.subplot(2, 5, 2)
-    mask_ex_color = apply_color_to_mask(mask_ex, [255, 0, 0])  # 빨간색
+    mask_ex_color = apply_color_to_mask(mask_ex, [76, 0, 153])
     plt.imshow(mask_ex_color)
-    plt.title('Ex Mask\n{}'.format(os.path.basename(os.path.join(mask_paths[0], image_filename))))
-    plt.title('Ex Mask')
+    plt.title('Ex Mask\n{}'.format(os.path.basename(image_filename)))
     plt.axis('off')
 
     # He 마스크 출력 (파란색)
     plt.subplot(2, 5, 3)
-    mask_he_color = apply_color_to_mask(mask_he, [0, 0, 255])  # 파란색
+    mask_he_color = apply_color_to_mask(mask_he, [0, 0, 255])
     plt.imshow(mask_he_color)
-    plt.title('He Mask')
+    plt.title('He Mask\n{}'.format(os.path.basename(image_filename)))
     plt.axis('off')
 
     # Ma 마스크 출력 (노란색)
     plt.subplot(2, 5, 4)
-    mask_ma_color = apply_color_to_mask(mask_ma, [255, 255, 0])  # 노란색
+    mask_ma_color = apply_color_to_mask(mask_ma, [255, 255, 0])
     plt.imshow(mask_ma_color)
-    plt.title('Ma Mask')
+    plt.title('Ma Mask\n{}'.format(os.path.basename(image_filename)))
     plt.axis('off')
 
     # Se 마스크 출력 (초록색)
     plt.subplot(2, 5, 5)
-    mask_se_color = apply_color_to_mask(mask_se, [0, 255, 0])  # 초록색
+    mask_se_color = apply_color_to_mask(mask_se, [0, 255, 0])
     plt.imshow(mask_se_color)
-    plt.title('Se Mask')
+    plt.title('Se Mask\n{}'.format(os.path.basename(image_filename)))
     plt.axis('off')
 
     plt.tight_layout()
 
     # Target 및 Predicted 마스크
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(15, 10))
 
     # 실제 세그멘테이션 마스크 출력 (Target 마스크)
     mask_target_combined = combine_masks(mask_ex, mask_he, mask_ma, mask_se)
@@ -87,13 +102,42 @@ def visualize_segmentation(image, mask_ex, mask_he, mask_ma, mask_se, mask_true,
     plt.imshow(mask_target_combined)
     plt.title('Target Mask')
     plt.axis('off')
+    
+    # 예측된 세그멘테이션 마스크 출력
+    plt.subplot(1, 2, 2)
+    plt.imshow(tf.squeeze(mask_pred), cmap='gray')
+
+    plt.title('Predicted Mask')
+    plt.axis('off')
+    
+    plt.tight_layout()
+    
+    
+    # Original에 Predicted 마스크와 Target 마스크
+    plt.figure(figsize=(15, 10))
+    
+    # Target 마스크 시각화
+    plt.subplot(1, 2, 1)
+    # 마스크를 원본 이미지 크기에 맞게 resize
+    resized_mask = cv2.resize(mask_target_combined, (rgb_image.shape[1], rgb_image.shape[0]))
+    # 마스크를 원본 이미지 위에 겹쳐서 시각화
+    masked_image = cv2.addWeighted(rgb_image, 1, resized_mask.astype(np.uint8), 10, 0)
+    plt.imshow(masked_image)
+    plt.title('Original Image with Target Mask')
+    plt.axis('off')
 
     # 예측된 세그멘테이션 마스크 출력
     plt.subplot(1, 2, 2)
-    plt.imshow(tf.squeeze(mask_pred), cmap='gray')  # tf.squeeze() 함수 적용
-    plt.title('Predicted Mask')
+    # 테두리 추출
+    pred_boundary = extract_mask_boundary(tf.squeeze(mask_pred).numpy())
+    # 테두리를 흰색으로 채우기
+    pred_boundary_colored = np.stack([pred_boundary, pred_boundary, pred_boundary], axis=-1) * 255
+    # 테두리를 원본 이미지 위에 겹쳐서 시각화
+    overlaid_image = cv2.addWeighted(rgb_image, 1, pred_boundary_colored.astype(np.uint8), 3, 0)
+    plt.imshow(overlaid_image)
+    plt.title('Predicted Mask with Original')
     plt.axis('off')
-
+    
     plt.tight_layout()
     plt.show()
 
@@ -108,7 +152,6 @@ def visualize_segmentation_results(image_filenames, model_path):
 
     model = SMD_Unet(enc_filters=[64, 128, 256, 512, 1024], dec_filters=[512, 256, 64, 32], input_channel=3)
     model.load_weights(model_path)
-
 
     for image_filename in image_filenames:
         # 이미지 파일의 인덱스 가져오기
@@ -136,8 +179,10 @@ def visualize_segmentation_results(image_filenames, model_path):
         # 모델에 이미지 전달하여 예측
         preds = model(image[np.newaxis, ...])
 
-        # 시각화 함수 호출
-        visualize_segmentation(image, selected_ex_mask, selected_he_mask, selected_ma_mask, selected_se_mask, None, preds[1])
+        # 시각화 함수 호출 (이미지 파일명도 함께 전달)
+        visualize_segmentation(image, selected_ex_mask, selected_he_mask, selected_ma_mask, selected_se_mask, None, preds[1], image_filename)
+        print("============================================================================================================================")
+
 
 if __name__ == "__main__":
     image_filenames = ["0381_1.png", "0311_1.png", "1134_1.png", "1181_3.png"]  # 원하는 이미지 파일명으로 수정
