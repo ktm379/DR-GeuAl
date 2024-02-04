@@ -73,7 +73,6 @@ class Trainer:
             
             return_loss = (cls_loss.numpy())
                 
-            
         grads = tape.gradient(cls_loss, self.model.trainable_weights)  # gradient 계산
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_weights))  # Otimizer에게 처리된 그라데이션 적용을 요청
         
