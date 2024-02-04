@@ -137,9 +137,12 @@ class UpsampleBlock(tf.keras.layers.Layer):
 
         return x   
 
-class ClsBlock(tf.keras.layers.Layer):
+
+# 1번 모델
+# -------------------------------------------------------------------------------------------------------------------------------------
+class ClsBlock_1(tf.keras.layers.Layer):
     def __init__(self, filters):
-        super(ClsBlock, self).__init__()
+        super(ClsBlock_1, self).__init__()
         self.filters = filters # filters = [n_filters]
         # [64, 128, 256, 512, 1024]
         self.conv_blocks_0_1 = ConvBlock(self.filters[0])
@@ -199,37 +202,23 @@ class ClsBlock(tf.keras.layers.Layer):
         x = self.dense(x)
 
         return x
-      
-class SnC_Unet(tf.keras.Model):
-    def __init__(self, enc_filters, dec_filters, input_channel):
-        super(SnC_Unet, self).__init__()
+
+
+class SnC_Unet_1(tf.keras.Model):
+    def __init__(self, enc_filters, dec_filters):
+        super(SnC_Unet_1, self).__init__()
 
         self.enc_filters = enc_filters
         self.dec_filters = dec_filters
 
         # Encoder
         self.encoder = EncoderBlock(self.enc_filters)
-
-        # Decoder
-        # 5종류의 decoder가 있음
-        # reconstruction
-        # HardExudate, Hemohedge, Microane, SoftExudates
-         # self.HardExudate = DecoderBlock(self.dec_filters)
-        # self.Hemohedge = DecoderBlock(self.dec_filters)
-        # self.Microane = DecoderBlock(self.dec_filters)
-        # self.SoftExudates = DecoderBlock(self.dec_filters)
-        
-        # 복원하기 위한 branch
-        # self.reconstruction = DecoderBlock(self.dec_filters, is_recons=True, input_channel=input_channel)
-        
-        # 하나의 마스크로 합쳐서 예측
-        self.decoder= DecoderBlock(self.dec_filters)
         
         # clsblock
-        self.clsblock = ClsBlock(self.enc_filters)
+        self.clsblock = ClsBlock_1(self.enc_filters)
        
 
-    def call(self, inputs, only_cls=False):
+    def call(self, inputs):
         # Encoder
         x, skips = self.encoder(inputs)
         
@@ -237,26 +226,98 @@ class SnC_Unet(tf.keras.Model):
         cls_pred = self.clsblock(inputs, skips, x)
         
         # Decoder
-        if only_cls:
-            return [cls_pred]
-    
-        else:
-            mask_hat = self.decoder(x, skips[::-1])
+        return [cls_pred]
             
-            return [cls_pred, mask_hat]
-            
-        # # Decoder
-        # input_hat = self.reconstruction(x, skips[::-1])
+
         
-        # reconstruction만 학습할 때 구분
-        # if only_recons:     
-        #     return [input_hat]
-        # else:
-        #     # ex = self.HardExudate(x, skips[::-1])
-        #     # he = self.Hemohedge(x, skips[::-1])
-        #     # ma = self.Microane(x, skips[::-1])
-        #     # se = self.SoftExudates(x, skips[::-1])
-            
-        #     mask_hat = self.decoder(x, skips[::-1])
-            
-        #     return [input_hat, mask_hat]
+        
+# 2번 모델
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class ClsBlock_2(tf.keras.layers.Layer):
+    def __init__(self, filters):
+        super(ClsBlock_2, self).__init__()
+        self.filter = filters[0] # filters = [n_filters]
+        # [64, 128, 256, 512, 1024]
+        self.conv_blocks_0_1 = ConvBlock(self.filter)
+        self.conv_blocks_0_2 = ConvBlock(self.filter)
+        self.conv_blocks_1_1 = ConvBlock(self.filter * 2)
+        self.conv_blocks_1_2 = ConvBlock(self.filter * 2)
+        self.conv_blocks_2_1 = ConvBlock(self.filter * 4)
+        self.conv_blocks_2_2 = ConvBlock(self.filter * 4)
+        self.conv_blocks_3_1 = ConvBlock(self.filter * 8)
+        self.conv_blocks_3_2 = ConvBlock(self.filter * 8)
+        self.conv_blocks_4_1 = ConvBlock(self.filter * 16)
+        self.conv_blocks_4_2 = ConvBlock(self.filter * 16)
+        
+        self.max_poolings_1 = keras.layers.MaxPooling2D(2)
+        self.max_poolings_2 = keras.layers.MaxPooling2D(2)
+        self.max_poolings_3 = keras.layers.MaxPooling2D(2)
+        self.max_poolings_4 = keras.layers.MaxPooling2D(2)
+        
+        self.concat_0 = keras.layers.Concatenate()
+        self.concat_1 = keras.layers.Concatenate()
+        self.concat_2 = keras.layers.Concatenate()
+        self.concat_3 = keras.layers.Concatenate()
+        self.concat_4 = keras.layers.Concatenate()
+        
+        self.gap = keras.layers.GlobalAveragePooling2D()
+        
+        self.dense = keras.layers.Dense(5, activation='softmax')
+        
+    def call(self, inputs, skips, encoded_x):         
+        # skip 받아서 conv - conv - maxpooling 하는 방식
+        x = self.conv_blocks_0_1(skips[0])
+        x = self.conv_blocks_0_2(x) 
+        x = self.max_poolings_1(x)
+        
+        x = self.concat_1([x, skips[1]])
+        x = self.conv_blocks_1_1(x)
+        x = self.conv_blocks_1_2(x)
+        x = self.max_poolings_2(x)
+        
+        x = self.concat_2([x, skips[2]])
+        x = self.conv_blocks_2_1(x)
+        x = self.conv_blocks_2_2(x)
+        x = self.max_poolings_3(x)
+        
+        x = self.concat_3([x, skips[3]])
+        x = self.conv_blocks_3_1(x)
+        x = self.conv_blocks_3_2(x)
+        x = self.max_poolings_4(x)
+        
+        x = self.concat_4([x, encoded_x])
+        x = self.conv_blocks_4_1(x)
+        x = self.conv_blocks_4_2(x)
+        
+        x = self.gap(x)
+        
+        x = self.dense(x)
+
+        return x
+
+
+class SnC_Unet_2(tf.keras.Model):
+    def __init__(self, enc_filters, dec_filters):
+        super(SnC_Unet_2, self).__init__()
+
+        self.enc_filters = enc_filters
+        self.dec_filters = dec_filters
+
+        # Encoder
+        self.encoder = EncoderBlock(self.enc_filters)
+             
+        # clsblock
+        self.clsblock = ClsBlock_2(self.enc_filters)
+       
+
+    def call(self, inputs):
+        # Encoder
+        x, skips = self.encoder(inputs)
+        
+        # Classification
+        cls_pred = self.clsblock(inputs, skips, x)
+        
+        # Decoder
+        return [cls_pred]
+    
+

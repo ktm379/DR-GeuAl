@@ -57,12 +57,8 @@ class DR_Generator(tf.keras.utils.Sequence):
             self.use_hist = False
         self.add_noise_std = add_noise_std
         
-        if label_path != None:
-            self.withCls = True 
-            label_df = pd.read_csv(label_path, header=None)
-            self.label_df = label_df.rename(columns={0:"file_name"})
-        else:
-            self.withCls = False 
+        label_df = pd.read_csv(label_path, header=None)
+        self.label_df = label_df.rename(columns={0:"file_name"})
         
         # load_dataset()을 통해서 directory path에서 라벨과 이미지를 확인
         self.data_paths = self.load_dataset()
@@ -146,40 +142,18 @@ class DR_Generator(tf.keras.utils.Sequence):
             # ma = np.zeros([self.batch_size, *self.img_size])
             # se = np.zeros([self.batch_size, *self.img_size])
 
-            mask = np.zeros([self.batch_size, *self.img_size])
-            
-        if self.withCls:
             label = np.zeros([self.batch_size])        
         
         for i, data in enumerate(batch_data_paths):
             # supervsion 일때는 4개의 label
             # unsupervision 일때는 label이 image가 됨 
-            if self.use_mask:
-                input_img_path, output_paths = data
 
-                # mask : HardExudate, Hemohedge, Microane, SoftExudates
-                _ex = preprocess_image(output_paths[0], img_size=self.img_size, use_hist=False)
-                _ex[_ex != 0] = 1
-                _he = preprocess_image(output_paths[1], img_size=self.img_size, use_hist=False)
-                _he[_he != 0] = 1
-                _ma = preprocess_image(output_paths[2], img_size=self.img_size, use_hist=False)
-                _ma[_ma != 0] = 1
-                _se = preprocess_image(output_paths[3], img_size=self.img_size, use_hist=False)
-                _se[_se != 0] = 1
                 
-                # ex[i] = _ex; he[i] = _he; ma[i] = _ma; se[i] = _se
-                _mask = np.maximum(_ex, _he)
-                _mask = np.maximum(_mask, _ma)
-                _mask = np.maximum(_mask, _se)
-                mask[i] = _mask
-                
-            else:
-                # mask 없음
-                input_img_path,  = data
+            # mask 없음
+            input_img_path,  = data
                 
                 
-            if self.withCls:
-                label[i] = self.get_label(input_img_path.split('/')[-1])
+            label[i] = self.get_label(input_img_path.split('/')[-1])
 
             # image
             _input = preprocess_image(input_img_path, 
@@ -217,18 +191,12 @@ class DR_Generator(tf.keras.utils.Sequence):
             # ma = ma.reshape(self.batch_size, *self.img_size, 1)
             # se = se.reshape(self.batch_size, *self.img_size, 1)
             
-            mask = mask.reshape(self.batch_size, *self.img_size, 1)
+
             
-            if self.add_noise_std != None:
-                return [tf.cast(inputs, dtype=tf.float32), tf.cast(noisy_inputs, dtype=tf.float32)], [tf.cast(mask, dtype=tf.float32)]
-            
-            if self.withCls:
-                label = label.reshape(self.batch_size, 1)
+            label = label.reshape(self.batch_size, 1)
                 
-                return [tf.cast(inputs, dtype=tf.float32)], [tf.cast(mask, dtype=tf.float32), tf.cast(label, dtype=tf.int32)]
-            
-            return [tf.cast(inputs, dtype=tf.float32)], [tf.cast(mask, dtype=tf.float32)]
-        
+            return [tf.cast(inputs, dtype=tf.float32)], [tf.cast(label, dtype=tf.int32)]
+                    
     def on_epoch_end(self):
         # 한 epoch가 끝나면 실행되는 함수
         # 학습중인 경우에 순서를 random shuffle하도록 적용
