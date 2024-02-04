@@ -33,8 +33,8 @@ def evaluate_segmentation(y_true, y_pred):
     mae = mean_absolute_error(y_true_flat, y_pred_flat)
     return dice, iou, pr_auc, mae
 
-def evaluate_model(generator, model_path):
-    model = SMD_Unet(enc_filters=[64, 128, 256, 512, 1024], dec_filters=[512, 256, 64, 32], input_channel=3)
+def evaluate_model(generator, model_path, input_channel):
+    model = SMD_Unet(enc_filters=[64, 128, 256, 512, 1024], dec_filters=[512, 256, 64, 32], input_channel=input_channel)
     model.load_weights(model_path)
     
     warnings.filterwarnings('ignore')
@@ -70,7 +70,7 @@ def evaluate_model(generator, model_path):
 
     return result
 
-def evaluate_main(generator_type, model_path):
+def evaluate_main(generator_type, model_path, input_channel, use_3channel):
     masks = ['HardExudate_Masks', 'Hemohedge_Masks', 'Microaneurysms_Masks', 'SoftExudate_Masks']
     mask_dir = '../data/Seg-set'
     mask_paths = [os.path.join(mask_dir, mask) for mask in masks]
@@ -85,7 +85,7 @@ def evaluate_main(generator_type, model_path):
         'img_size':(512, 512),  
         'batch_size':4,
         'dataset':'FGADR',
-        'use_3channel':True,
+        'use_3channel':use_3channel,
         'CLAHE_args':None,
     }
 
@@ -98,10 +98,12 @@ def evaluate_main(generator_type, model_path):
     else:
         raise ValueError("유형이 잘못됨. 다시 선택 : 'train', 'validation', or 'test'.")
 
-    evaluation_result = evaluate_model(generator, model_path)
+    evaluation_result = evaluate_model(generator, model_path, input_channel)
     evaluation_result = evaluation_result.sort_values(by='dice', ascending=False)
     evaluation_result.to_csv(csv_filename, index=False)
     print(f"CSV 파일 저장 완료: {csv_filename}")
+    
+    return evaluation_result
 
 if __name__ == "__main__":
     evaluate_main('train', "../models/one_mask/withoutCLAHE_withRecons_alpha01_lr00001_3channel/26")
