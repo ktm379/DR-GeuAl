@@ -136,21 +136,10 @@ class DR_Generator(tf.keras.utils.Sequence):
             inputs = np.zeros([self.batch_size, *self.img_size])
         
         if self.dataset == "FGADR":
-            # mask가 4개임 , HardExudate, Hemohedge, Microane, SoftExudates
-            # ex = np.zeros([self.batch_size, *self.img_size])
-            # he = np.zeros([self.batch_size, *self.img_size])
-            # ma = np.zeros([self.batch_size, *self.img_size])
-            # se = np.zeros([self.batch_size, *self.img_size])
-
             label = np.zeros([self.batch_size])        
         
         for i, data in enumerate(batch_data_paths):
-            # supervsion 일때는 4개의 label
-            # unsupervision 일때는 label이 image가 됨 
-
-                
-            # mask 없음
-            input_img_path,  = data
+            input_img_path, mask_path = data
                 
                 
             label[i] = self.get_label(input_img_path.split('/')[-1])

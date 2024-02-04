@@ -39,31 +39,7 @@ class Trainer:
         self.save_model_path = save_model_path
         self.add_noise = add_noise
         self.with_mask = with_mask
-        
-        if beta!=None:
-            self.b1, self.b2, self.b3, self.b4 = beta
-            self.b1 = tf.cast(self.b1, dtype=tf.float32)
-            self.b2 = tf.cast(self.b2, dtype=tf.float32)
-            self.b3 = tf.cast(self.b3, dtype=tf.float32)
-            self.b4 = tf.cast(self.b4, dtype=tf.float32)
-        
-        # reconstruction만 학습하는거면 안쓰는 decoder trainable=False로 해주기
-        if self.for_recons:
-            # self.model.HardExudate.trainable=False
-            # self.model.Hemohedge.trainable=False
-            # self.model.Microane.trainable=False
-            # self.model.SoftExudates.trainable=False
-            self.model.decoder.trainable=False
-        else:
-            # self.model.HardExudate.trainable=True
-            # self.model.Hemohedge.trainable=True
-            # self.model.Microane.trainable=True
-            # self.model.SoftExudates.trainable=True
-            self.model.decoder.trainable=True
-            
-        if self.alpha == 0.0:
-            self.model.reconstruction.trainable=False
-            
+         
         self.CE = tf.keras.losses.SparseCategoricalCrossentropy()
 
     # loss 함수 계산하는 부분 
@@ -90,17 +66,10 @@ class Trainer:
     @tf.function
     def train_on_batch(self, x_batch_train, y_batch_train):
         with tf.GradientTape() as tape:
-
-            preds = self.model(x_batch_train[0], only_recons=self.for_recons, training=True)    # 모델이 예측한 결과
-#             input_hat, ex_hat, he_hat, ma_hat, se_hat = preds
+            preds = self.model(x_batch_train[0], training=True)    # 모델이 예측한 결과
             
-#             ex, he, ma, se = y_batch_train
-            
-            # loss 계산하기
-            # reconstruction
-            # loss_recons = self.mean_square_error(preds[0], x_batch_train[0])
-            
-            cls_loss = self.CE(preds[0], y_batch_train[0])
+            # loss 계산하기            
+            cls_loss = self.CE(y_batch_train[0], preds[0])
             
             return_loss = (cls_loss.numpy())
                 
@@ -154,9 +123,9 @@ class Trainer:
             
             for step_val, (x_batch_val, y_batch_val) in enumerate(val_dataset):
                 # 모델이 예측한 결과
-                preds = self.model(x_batch_train[0], only_recons=self.for_recons, training=False)    # 모델이 예측한 결과
+                preds = self.model(x_batch_val[0], training=False)    # 모델이 예측한 결과
                 
-                cls_loss = self.CE(preds[0], y_batch_val[0])
+                cls_loss = self.CE(y_batch_val[0], preds[0])
                 values = [('cls_loss', cls_loss)]
                                         
                 cls_batch_loss.append(cls_loss.numpy())
