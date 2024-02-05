@@ -20,7 +20,8 @@ class Trainer:
                  first_epoch=1, 
                  file_name=None, 
                  save_model_path=None, 
-                 add_noise=False):
+                 add_noise=False,
+                 bce_weight=0):
         '''
         for_recons : bool, 학습 단계 구분하기 위함
         alpha : recons loss에 곱해줄 가중치
@@ -37,6 +38,7 @@ class Trainer:
         self.file_name = file_name
         self.save_model_path = save_model_path
         self.add_noise = add_noise
+        self.bce_weight = tf.cast(bce_weight, dtype=tf.float32)
         
         if beta!=None:
             self.b1, self.b2, self.b3, self.b4 = beta
@@ -60,11 +62,13 @@ class Trainer:
             self.model.decoder.trainable=True
             
         if self.alpha == 0.0:
-            self.model.reconstruction.trainable=False
+            self.model.reconstruction.trainable=False            
+            
+        self.BCE_fn = tf.keras.losses.BinaryCrossentropy()
 
     # loss 함수 계산하는 부분 
     # return 값이 텐서여야 하는건가? -> 아마도 그런 것 같다.
-    def dice_coef(self, y_true, y_pred, smooth=1.0):
+    def dice_coef(self, y_true, y_pred, smooth=100.0):
         y_true_f = K.flatten(y_true)
         y_pred_f = K.flatten(y_pred)
         intersection = K.sum(y_true_f * y_pred_f)
@@ -104,8 +108,11 @@ class Trainer:
                 # he_loss = self.dice_loss(y_batch_train[1], preds[2])
                 # ma_loss = self.dice_loss(y_batch_train[2], preds[3])
                 # se_loss = self.dice_loss(y_batch_train[3], preds[4])
-                    
-                mask_loss = self.dice_loss(y_batch_train, preds[1])
+                
+                dice_loss = self.dice_loss(y_batch_train, preds[1])
+                bce_loss = self.BCE_fn(y_batch_train, preds[1])
+                
+                mask_loss = dice_loss + self.bce_weight * bce_loss 
                 
                 # loss 가중합 해주기
                 # train_loss = self.b1 * ex_loss + self.b2 * he_loss + self.b3 * ma_loss + self.b4 * se_loss + self.alpha * loss_recons
@@ -114,7 +121,7 @@ class Trainer:
                     train_loss = mask_loss
                 else:
                     train_loss = self.alpha * loss_recons + (1-self.alpha) * mask_loss
-                return_loss = (loss_recons.numpy(), train_loss.numpy(), mask_loss.numpy())
+                return_loss = (loss_recons.numpy(), train_loss.numpy(), mask_loss.numpy(), dice_loss.numpy(), bce_loss.numpy())
                 
             else:     
                 train_loss = loss_recons 
@@ -142,20 +149,31 @@ class Trainer:
             mask_batch_loss = []
             recons_batch_loss = []
             total_batch_loss = []
+            dice_batch_loss = []
+            bce_batch_loss = []
             
             for step_train, (x_batch_train, y_batch_train) in enumerate(train_dataset):
                 if not self.for_recons:
-                    loss_recons, train_loss, mask_loss = self.train_on_batch(x_batch_train, y_batch_train)
-                    values = [('train_loss', train_loss), ('mask_loss', mask_loss), ('loss_recons', loss_recons)]
+                    loss_recons, train_loss, mask_loss, dice_loss, bce_loss = self.train_on_batch(x_batch_train, y_batch_train)
+                    
+                    values = [('train_loss', train_loss), 
+                              ('mask_loss', mask_loss), 
+                              ('loss_recons', loss_recons),
+                              ('dice_loss', dice_loss),
+                              ('bce_loss', bce_loss)]
                                         
                     mask_batch_loss.append(mask_loss)
                     recons_batch_loss.append(loss_recons)
                     total_batch_loss.append(train_loss)
+                    dice_batch_loss.append(dice_loss)
+                    bce_batch_loss.append(bce_loss)
                     
                     if (step_train + 1) == len(train_dataset):
                         values = [('train_loss', np.mean(total_batch_loss)), 
                                   ('mask_loss', np.mean(mask_batch_loss)), 
-                                  ('loss_recons', np.mean(recons_batch_loss))]
+                                  ('loss_recons', np.mean(recons_batch_loss)),
+                                  ('dice_loss', np.mean(dice_batch_loss)),
+                                  ('bce_loss', np.mean(bce_batch_loss))]
                 else:
                     loss_recons, train_loss = self.train_on_batch(x_batch_train, y_batch_train)
                     values = [('train_loss', train_loss), ('loss_recons', loss_recons)]
@@ -177,15 +195,17 @@ class Trainer:
             # txt 파일에 기록하기
             if self.file_name != None:
                 with open(self.file_name, 'a') as f:
-                    f.write(f"epoch:{epoch + self.first_epoch}/train_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}\n")  
+                    f.write(f"epoch:{epoch + self.first_epoch}/val_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}/dice_loss:{np.mean(dice_batch_loss)}/bce_loss:{np.mean(bce_batch_loss)}\n") 
             
             
             # epoch 단위로 계산하기 위함
             mask_batch_loss = []
             recons_batch_loss = []
             total_batch_loss = []
+            dice_batch_loss = []
+            bce_batch_loss = []
             
-            val_progBar = Progbar(target=len(val_dataset) * val_dataset.batch_size, stateful_metrics=['val_loss','mask_loss', 'loss_recons'])
+            val_progBar = Progbar(target=len(val_dataset) * val_dataset.batch_size, stateful_metrics=['val_loss','mask_loss', 'loss_recons', 'dice_loss', 'bce_loss'])
             
             for step_val, (x_batch_val, y_batch_val) in enumerate(val_dataset):
                 # 모델이 예측한 결과
@@ -205,20 +225,31 @@ class Trainer:
                     # ma_loss = self.dice_loss(y_batch_val[2], preds[3])
                     # se_loss = self.dice_loss(y_batch_val[3], preds[4])   
                     
-                    mask_loss = self.dice_loss(y_batch_val, preds[1])
+                    dice_loss = self.dice_loss(y_batch_val, preds[1])
+                    bce_loss = self.BCE_fn(y_batch_val, preds[1])
+
+                    mask_loss = dice_loss + self.bce_weight * bce_loss
                     
                     # loss 가중합 해주기
                     val_loss = self.alpha * loss_recons + (1 - self.alpha) * mask_loss
-                    values = [('val_loss', val_loss.numpy()),('mask_loss', mask_loss.numpy()), ('loss_recons', loss_recons.numpy())]
+                    values = [('val_loss', val_loss.numpy()),
+                              ('mask_loss', mask_loss.numpy()), 
+                              ('loss_recons', loss_recons.numpy()),
+                              ('dice_loss', dice_loss.numpy()),
+                              ('bce_loss', bce_loss.numpy())]
                                         
                     mask_batch_loss.append(mask_loss.numpy())
                     recons_batch_loss.append(loss_recons.numpy())
                     total_batch_loss.append(val_loss.numpy())
+                    dice_batch_loss.append(dice_loss.numpy())
+                    bce_batch_loss.append(bce_loss.numpy())
                     
                     if (step_val + 1) == len(val_dataset):
                         values = [('val_loss', np.mean(total_batch_loss)), 
                                   ('mask_loss', np.mean(mask_batch_loss)), 
-                                  ('loss_recons', np.mean(recons_batch_loss))]
+                                  ('loss_recons', np.mean(recons_batch_loss)),
+                                  ('dice_loss', np.mean(dice_batch_loss)),
+                                  ('bce_loss', np.mean(bce_batch_loss))]
                     
                 else:     
                     val_loss = loss_recons
@@ -242,7 +273,7 @@ class Trainer:
              # txt 파일에 기록하기
             if self.file_name != None:
                 with open(self.file_name, 'a') as f:
-                    f.write(f"epoch:{epoch + self.first_epoch}/val_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}\n")
+                    f.write(f"epoch:{epoch + self.first_epoch}/val_loss:{np.mean(total_batch_loss)}/mask_loss:{np.mean(mask_batch_loss)}/recons_loss:{np.mean(recons_batch_loss)}/dice_loss:{np.mean(dice_batch_loss)}/bce_loss:{np.mean(bce_batch_loss)}\n")
         
             # 학습한 모델 저장하기
             if self.save_model_path != None:  
