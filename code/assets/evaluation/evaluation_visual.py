@@ -126,24 +126,26 @@ def visualize_segmentation(image, mask_ex, mask_he, mask_ma, mask_se, mask_true,
     plt.title('Original Image with Target Mask')
     plt.axis('off')
 
-    # 예측된 세그멘테이션 마스크 출력
+    # 원본 이미지에 예측된 세그멘테이션 마스크 겹쳐서 시각화
     plt.subplot(1, 2, 2)
-    # 테두리 추출
-    pred_boundary = extract_mask_boundary(tf.squeeze(mask_pred).numpy())
-    # 테두리를 흰색으로 채우기
-    pred_boundary_colored = np.stack([pred_boundary, pred_boundary, pred_boundary], axis=-1) * 255
-    # 테두리를 원본 이미지 위에 겹쳐서 시각화
-    overlaid_image = cv2.addWeighted(rgb_image, 1, pred_boundary_colored.astype(np.uint8), 3, 0)
-    plt.imshow(overlaid_image)
-    plt.title('Predicted Mask with Original')
+    # 예측된 세그멘테이션 마스크를 numpy 배열로 변환
+    predicted_mask = tf.squeeze(mask_pred).numpy()
+    # 예측된 세그멘테이션 마스크를 이진화하여 0 또는 1의 값으로 변환
+    binary_mask = (predicted_mask > 0.5).astype(np.uint8) * 255
+    # 마스크를 원본 이미지 위에 겹쳐서 시각화
+    masked_image = cv2.addWeighted(rgb_image, 1, cv2.cvtColor(binary_mask, cv2.COLOR_GRAY2BGR), 0.5, 0)
+    plt.imshow(masked_image)
+    plt.title('Original Image with Predicted Mask')
     plt.axis('off')
+
     
     plt.tight_layout()
     plt.show()
 
+
 def visualize_segmentation_results(image_filenames, model_path):
-    mask_dir = '../data/Seg-set'
-    image_dir = '../data/Seg-set/Original_Images/'
+    mask_dir = '../data/FGADR/Seg-set'
+    image_dir = '../data/FGADR/Seg-set/Original_Images/'
     masks = ['HardExudate_Masks', 'Hemohedge_Masks', 'Microaneurysms_Masks', 'SoftExudate_Masks']
     mask_paths = [os.path.join(mask_dir, mask) for mask in masks]
 
