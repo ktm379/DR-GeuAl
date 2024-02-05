@@ -143,9 +143,11 @@ def visualize_segmentation(image, mask_ex, mask_he, mask_ma, mask_se, mask_true,
     plt.show()
 
 
-def visualize_segmentation_results(image_filenames, model_path):
-    mask_dir = '../data/FGADR/Seg-set'
-    image_dir = '../data/FGADR/Seg-set/Original_Images/'
+def visualize_segmentation_results(image_filenames, 
+                                   model_path, 
+                                   mask_dir='../data/FGADR/Seg-set', 
+                                   image_dir='../data/FGADR/Seg-set/Original_Images/'):
+
     masks = ['HardExudate_Masks', 'Hemohedge_Masks', 'Microaneurysms_Masks', 'SoftExudate_Masks']
     mask_paths = [os.path.join(mask_dir, mask) for mask in masks]
 
