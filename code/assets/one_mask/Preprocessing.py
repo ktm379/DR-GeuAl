@@ -1,6 +1,8 @@
 import cv2
+import numpy as np
+import matplotlib.pyplot as plt
 
-def crop_and_resize_image(image, img_size, use_3channel=False):
+def crop_and_resize_image(image, img_size, use_3channel=True):
     '''
     각 채널을 받아 크기 조정(512x512 픽셀로 다운샘플링), 
     이미지 크롭 수행(FOV의 직경과 동일한 정사각형),
@@ -10,13 +12,10 @@ def crop_and_resize_image(image, img_size, use_3channel=False):
     '''
     # 3개의 채널 전부 전처리할 경우
     if use_3channel:
-        channels = [cv2.resize(image[:, :, i], img_size) for i in range(3)]
-        diameter = min(channels[0].shape[0], channels[0].shape[1])
-        center_x, center_y = channels[0].shape[1] // 2, channels[0].shape[0] // 2
-        crop_size = min(center_x, center_y, diameter // 2)
-        cropped_channels = [channel[center_y - crop_size:center_y + crop_size, center_x - crop_size:center_x + crop_size] for channel in channels]
-        cropped_image = cv2.merge(cropped_channels)
-    
+
+        # 크기 조정
+        cropped_image = cv2.resize(image, img_size, interpolation=cv2.INTER_CUBIC)
+
     # 녹색 채널만 전처리할 경우
     else:
         resized_image = cv2.resize(image, img_size)
@@ -27,7 +26,18 @@ def crop_and_resize_image(image, img_size, use_3channel=False):
         
     return cropped_image
 
-def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channel=False, CLAHE_args=None):
+def apply_clahe(image, clahe):
+    # LAB 색 공간으로 변환
+    lab_image = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    
+    # 각 채널에 CLAHE 적용
+    lab_image[:, :, 0] = clahe.apply(lab_image[:, :, 0])
+    
+    # BGR 색 공간으로 다시 변환
+    enhanced_image = cv2.cvtColor(lab_image, cv2.COLOR_LAB2BGR)
+    return enhanced_image
+
+def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channel=True, CLAHE_args=None):
     '''
     image_path를 받아 이미지를 읽고, 
     각 채널에 대한 대비 향상, 
@@ -36,24 +46,15 @@ def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channe
     if CLAHE_args != None:
         clipLimit, tileGridSize = CLAHE_args
     
-    
     original_image = cv2.imread(image_path)
 
     if use_3channel:
-        # 모든 채널 가져오기
-        channels = [original_image[:, :, i] for i in range(3)]
-
         # 대비 향상 적용
-        if use_hist:
-            clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
-            contrast_enhanced_channels = [clahe.apply(channel) for channel in channels]
+        clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
+        contrast_enhanced_image = apply_clahe(original_image, clahe)
 
-            # 각 채널 합치기
-            contrast_enhanced_image = cv2.merge(contrast_enhanced_channels)
-            cropped_image = crop_and_resize_image(contrast_enhanced_image, img_size, use_3channel=True)
-        else:
-            # 각 채널 합치기
-            cropped_image = crop_and_resize_image(original_image, img_size, use_3channel=True)
+        # 크롭 및 크기 조정
+        cropped_image = crop_and_resize_image(contrast_enhanced_image, img_size, use_3channel=True)
     else:
         # 녹색 채널만 사용
         green_channel = original_image[:, :, 1]
@@ -67,6 +68,6 @@ def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channe
             cropped_image = crop_and_resize_image(green_channel, img_size, use_3channel=False)
 
     # 0~1로 scale 맞추기
-    cropped_image = cropped_image / 255.0
+    cropped_image = cropped_image.astype(np.float32) / 255.0
       
     return cropped_image
