@@ -53,6 +53,8 @@ class DR_Generator(tf.keras.utils.Sequence):
         self.CLAHE_args = CLAHE_args
         if self.CLAHE_args == None:
             self.use_hist = False
+        else:
+            self.use_hist = True
         self.add_noise_std = add_noise_std
         
 
