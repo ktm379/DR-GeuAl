@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-def crop_and_resize_image(image, img_size, use_3channel=True):
+def crop_and_resize_image(image, img_size, use_3channel=False):
     '''
     각 채널을 받아 크기 조정(512x512 픽셀로 다운샘플링), 
     이미지 크롭 수행(FOV의 직경과 동일한 정사각형),
@@ -37,7 +37,7 @@ def apply_clahe(image, clahe):
     enhanced_image = cv2.cvtColor(lab_image, cv2.COLOR_LAB2BGR)
     return enhanced_image
 
-def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channel=True, CLAHE_args=None):
+def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channel=False, CLAHE_args=None):
     '''
     image_path를 받아 이미지를 읽고, 
     각 채널에 대한 대비 향상, 
