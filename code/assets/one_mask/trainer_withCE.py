@@ -68,7 +68,7 @@ class Trainer:
 
     # loss 함수 계산하는 부분 
     # return 값이 텐서여야 하는건가? -> 아마도 그런 것 같다.
-    def dice_coef(self, y_true, y_pred, smooth=100.0):
+    def dice_coef(self, y_true, y_pred, smooth=1.0):
         y_true_f = K.flatten(y_true)
         y_pred_f = K.flatten(y_pred)
         intersection = K.sum(y_true_f * y_pred_f)

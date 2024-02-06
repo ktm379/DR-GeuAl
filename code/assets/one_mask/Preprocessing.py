@@ -60,7 +60,7 @@ def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channe
 
         # 대비 향상 적용
         if use_hist:
-            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+            clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
             contrast_enhanced_image = clahe.apply(green_channel)
             cropped_image = crop_and_resize_image(contrast_enhanced_image, img_size, use_3channel=False)
         else:
