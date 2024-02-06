@@ -70,16 +70,15 @@ def evaluate_model(generator, model_path, input_channel):
 
     return result
 
-def evaluate_main(generator_type, model_path, input_channel, use_3channel):
+def evaluate_main(generator_type, model_path, input_channel, use_3channel, mask_dir, dir_path):
     masks = ['HardExudate_Masks', 'Hemohedge_Masks', 'Microaneurysms_Masks', 'SoftExudate_Masks']
-    mask_dir = '../data/FGADR/Seg-set'
     mask_paths = [os.path.join(mask_dir, mask) for mask in masks]
     model_name = os.path.basename(os.path.dirname(model_path))
     csv_directory = "assets/evaluation/evaluation_results_csv"  # 저장할 디렉토리 경로
     csv_filename = os.path.join(csv_directory, f"{model_name}_{generator_type}_evaluation_result.csv")
     
     generator_args = {
-        'dir_path':'../data/FGADR/Seg-set/Original_Images/',
+        'dir_path':dir_path,
         'mask_path':mask_paths,
         'use_mask':True,
         'img_size':(512, 512),  
