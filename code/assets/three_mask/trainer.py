@@ -97,7 +97,7 @@ class Trainer:
                 # ex, he, ma, se
                 ex_loss = self.dice_loss(y_batch_train[0], preds[1])
                 ma_he_loss = self.dice_loss(y_batch_train[1], preds[2])
-                se_loss = self.dice_loss(y_batch_train[3], preds[3])
+                se_loss = self.dice_loss(y_batch_train[2], preds[3])
                                     
                 # loss 가중합 해주기
                 mask_loss = self.b1 * ex_loss + self.b2 * ma_he_loss + self.b3 * se_loss
