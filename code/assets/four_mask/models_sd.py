@@ -4,20 +4,25 @@ import keras_cv
 
 
 class ConvBlock(tf.keras.layers.Layer):
-    def __init__(self, n_filters, dropout_args):
+    def __init__(self, n_filters, dropout_args=None):
         super(ConvBlock, self).__init__()
         self.filters = n_filters
         self.conv = keras.layers.Conv2D(n_filters, 3, padding='same')
         self.bn = keras.layers.BatchNormalization()
         self.relu = keras.layers.Activation('relu')
-        rate, block_size = dropout_args
-        self.dropout = keras_cv.layers.DropoutBlock2D(rate=rate, block_size=block_size)
+        if dropout_args != None:
+            rate, block_size = dropout_args
+            self.dropout = keras_cv.layers.DropBlock2D(rate=rate, block_size=block_size)
+            self.use_drop = True
+        else:
+            self.use_drop = False
         # self.dropout = keras_cv.layers.DropoutBlock2D(rate=0.08, block_size=7)
-         
+            
     def call(self, x):
         x = self.conv(x)
         x = self.bn(x)
-        x = self.dropout(x)
+        if self.use_drop:
+            x = self.dropout(x)
         x = self.relu(x)
         
         return x
@@ -141,7 +146,10 @@ class SMD_Unet(tf.keras.Model):
         self.reconstruction = DecoderBlock(self.dec_filters, dropout_args, is_recons=True, input_channel=input_channel)
         
         # 하나의 마스크로 합쳐서 예측
-        self.decoder = DecoderBlock(self.dec_filters, dropout_args)
+        self.HardExudate = DecoderBlock(self.dec_filters, dropout_args)
+        self.Hemohedge = DecoderBlock(self.dec_filters, dropout_args)
+        self.Microane = DecoderBlock(self.dec_filters, dropout_args)
+        self.SoftExudates = DecoderBlock(self.dec_filters, dropout_args)
        
 
     def call(self, inputs, only_recons=False):
@@ -153,6 +161,9 @@ class SMD_Unet(tf.keras.Model):
         if only_recons:     
             return [input_hat]
         else:
-            mask_hat = self.decoder(x, skips[::-1])
+            ex_hat = self.HardExudate(x, skips[::-1])
+            he_hat = self.Hemohedge(x, skips[::-1])
+            ma_hat = self.Microane(x, skips[::-1])
+            se_hat = self.SoftExudates(x, skips[::-1])
             
-            return [input_hat, mask_hat]
+            return [input_hat, ex_hat, he_hat, ma_hat, se_hat]
