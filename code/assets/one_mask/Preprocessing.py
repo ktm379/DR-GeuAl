@@ -49,12 +49,17 @@ def preprocess_image(image_path, img_size=(512, 512), use_hist=True, use_3channe
     original_image = cv2.imread(image_path)
 
     if use_3channel:
-        # 대비 향상 적용
-        clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
-        contrast_enhanced_image = apply_clahe(original_image, clahe)
+        
+        if use_hist:
+            # 대비 향상 적용
+            clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
+            contrast_enhanced_image = apply_clahe(original_image, clahe)
 
-        # 크롭 및 크기 조정
-        cropped_image = crop_and_resize_image(contrast_enhanced_image, img_size, use_3channel=True)
+            # 크롭 및 크기 조정
+            cropped_image = crop_and_resize_image(contrast_enhanced_image, img_size, use_3channel=True)
+        
+        else:
+            cropped_image = crop_and_resize_image(original_image, img_size, use_3channel=True)
     else:
         # 녹색 채널만 사용
         green_channel = original_image[:, :, 1]
