@@ -169,8 +169,6 @@ class DR_Generator(tf.keras.utils.Sequence):
         if not self.use_3channel:
             inputs = inputs.reshape(self.batch_size, *self.img_size, 1)
             
-        if self.add_noise_std != None:
-            noisy_inputs = add_gaussian_noise(inputs, self.add_noise_std)
         
         # mask 없을 때는 input이 label이 됨
         if self.dataset == "EyePacks":
@@ -188,8 +186,6 @@ class DR_Generator(tf.keras.utils.Sequence):
             se = se.reshape(self.batch_size, *self.img_size, 1)
             ma_he = ma_he.reshape(self.batch_size, *self.img_size, 1)
                                     
-            # if self.add_noise_std != None:
-            #     return [tf.cast(inputs, dtype=tf.float32), tf.cast(noisy_inputs, dtype=tf.float32)], [tf.cast(ex, dtype=tf.float32), tf.cast(he, dtype=tf.float32), tf.cast(ma, dtype=tf.float32), tf.cast(se, dtype=tf.float32)]
             
             # input, target
             # [image], [ex, ma_he, se]

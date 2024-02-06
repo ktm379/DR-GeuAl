@@ -81,10 +81,7 @@ class Trainer:
     @tf.function
     def train_on_batch(self, x_batch_train, y_batch_train):
         with tf.GradientTape() as tape:
-            if self.add_noise:
-                preds = self.model(x_batch_train[1], only_recons=self.for_recons, training=True)
-            else:
-                preds = self.model(x_batch_train[0], only_recons=self.for_recons, training=True)    # 모델이 예측한 결과
+            preds = self.model(x_batch_train[0], only_recons=self.for_recons, training=True)    # 모델이 예측한 결과
             
             # input_hat, ex_hat, ma_he_hat, se_hat = preds
             # ex, ma_he, se = y_batch_train
