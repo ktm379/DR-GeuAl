@@ -50,8 +50,6 @@ def parse_history_text(path):
     
     return history
 
-epoch:1/val_loss:1.4458084106445312/mask_loss:1.5946999788284302/recons_loss:0.10578405857086182/dice_loss:0.9545060992240906/bce_loss:0.6401939988136292
-
 # history/.txt로부터 history를 불러오는 함수
 def parse_history_text_CE(path):    
     epochs = []
