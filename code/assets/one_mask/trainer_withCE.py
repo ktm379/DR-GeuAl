@@ -120,7 +120,7 @@ class Trainer:
                 if self.alpha == 0.0:
                     train_loss = mask_loss
                 else:
-                    train_loss = self.alpha * loss_recons + (1-self.alpha) * mask_loss
+                    train_loss = self.alpha * loss_recons + mask_loss
                 return_loss = (loss_recons.numpy(), train_loss.numpy(), mask_loss.numpy(), dice_loss.numpy(), bce_loss.numpy())
                 
             else:     
@@ -231,7 +231,7 @@ class Trainer:
                     mask_loss = dice_loss + self.bce_weight * bce_loss
                     
                     # loss 가중합 해주기
-                    val_loss = self.alpha * loss_recons + (1 - self.alpha) * mask_loss
+                    val_loss = self.alpha * loss_recons + mask_loss
                     values = [('val_loss', val_loss.numpy()),
                               ('mask_loss', mask_loss.numpy()), 
                               ('loss_recons', loss_recons.numpy()),
