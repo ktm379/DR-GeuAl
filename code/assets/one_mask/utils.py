@@ -23,7 +23,7 @@ def parse_history_text(path):
             recons_loss = float(splits[3][12:])
             
             if i % 2 == 0:        
-                train_loss = float(splits[1][9:])
+                train_loss = float(splits[1][11:])
                 
                 epochs.append(epoch)
                 tr_loss.append(train_loss)
@@ -79,7 +79,7 @@ def parse_history_text_CE(path):
             bce_loss = float(splits[5][9:])
             
             if i % 2 == 0:        
-                train_loss = float(splits[1][11:])
+                train_loss = float(splits[1][9:])
                 
                 epochs.append(epoch)
                 tr_loss.append(train_loss)
