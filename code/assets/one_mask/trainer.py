@@ -45,22 +45,22 @@ class Trainer:
             self.b3 = tf.cast(self.b3, dtype=tf.float32)
             self.b4 = tf.cast(self.b4, dtype=tf.float32)
         
-        # reconstruction만 학습하는거면 안쓰는 decoder trainable=False로 해주기
-        if self.for_recons:
-            # self.model.HardExudate.trainable=False
-            # self.model.Hemohedge.trainable=False
-            # self.model.Microane.trainable=False
-            # self.model.SoftExudates.trainable=False
-            self.model.decoder.trainable=False
-        else:
-            # self.model.HardExudate.trainable=True
-            # self.model.Hemohedge.trainable=True
-            # self.model.Microane.trainable=True
-            # self.model.SoftExudates.trainable=True
-            self.model.decoder.trainable=True
+#         # reconstruction만 학습하는거면 안쓰는 decoder trainable=False로 해주기
+#         if self.for_recons:
+#             # self.model.HardExudate.trainable=False
+#             # self.model.Hemohedge.trainable=False
+#             # self.model.Microane.trainable=False
+#             # self.model.SoftExudates.trainable=False
+#             self.model.decoder.trainable=False
+#         else:
+#             # self.model.HardExudate.trainable=True
+#             # self.model.Hemohedge.trainable=True
+#             # self.model.Microane.trainable=True
+#             # self.model.SoftExudates.trainable=True
+#             self.model.decoder.trainable=True
             
-        if self.alpha == 0.0:
-            self.model.reconstruction.trainable=False
+#         if self.alpha == 0.0:
+#             self.model.reconstruction.trainable=False
 
     # loss 함수 계산하는 부분 
     # return 값이 텐서여야 하는건가? -> 아마도 그런 것 같다.
@@ -87,9 +87,9 @@ class Trainer:
     def train_on_batch(self, x_batch_train, y_batch_train):
         with tf.GradientTape() as tape:
             if self.add_noise:
-                preds = self.model(x_batch_train[1], only_recons=self.for_recons, training=True)
+                preds = self.model(x_batch_train[1], training=True)
             else:
-                preds = self.model(x_batch_train[0], only_recons=self.for_recons, training=True)    # 모델이 예측한 결과
+                preds = self.model(x_batch_train[0], training=True)    # 모델이 예측한 결과
 #             input_hat, ex_hat, he_hat, ma_hat, se_hat = preds
             
 #             ex, he, ma, se = y_batch_train
@@ -190,9 +190,9 @@ class Trainer:
             for step_val, (x_batch_val, y_batch_val) in enumerate(val_dataset):
                 # 모델이 예측한 결과
                 if self.add_noise:
-                    preds = self.model(x_batch_val[1], only_recons=self.for_recons, training=False)
+                    preds = self.model(x_batch_val[1], training=False)
                 else:
-                    preds = self.model(x_batch_val[0], only_recons=self.for_recons, training=False)    
+                    preds = self.model(x_batch_val[0], training=False)    
                 
                 # loss 계산하기
                 # reconstruction

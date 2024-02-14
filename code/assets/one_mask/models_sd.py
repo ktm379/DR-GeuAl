@@ -67,7 +67,7 @@ class DropBlock(keras.layers.Layer):
         mask = mask.reshape((1, feat_size, feat_size))
 
         # Apply the mask
-        x = x * np.repeat(mask, x.shape[1], 0)
+        x = x * np.repeat(mask, x.shape[0], 0)
 
         # Normalize the features
         count = np.prod(mask.shape)
