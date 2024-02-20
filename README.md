@@ -1,5 +1,13 @@
-We aim to diagnose DR more effectively by segmenting its detailed symptoms.
+# 프로젝트 설명
 
-# Directory Tree
----
-![image](https://github.com/mkk4726/DR-GeuAl/assets/68997408/00017d4d-f88b-4b2f-895a-7f65415a2e36)
+## 팀이름 : DR 그알
+Diabetic Retinopathy (당뇨병성망막병증) 그것이 알고 싶다는 뜻입니다.   
+
+## DR이란?
+당뇨병 환자들은 높은 혈당을 가지게 되고, 이로 인해 혈관이 손상되게 됩니다.  
+처음에는 혈관이 손상되는 비증식성 DR에서, 새로운 혈관이 생기는 증식성 DR로 발전하게 됩니다.
+
+
+
+
+
