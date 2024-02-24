@@ -1,0 +1,4 @@
+epoch:1/train_loss:0.0007656157941962344/mask_loss:nan/recons_loss:0.0007656157941962344
+epoch:1/val_loss:1.6590883985827531e-06/mask_loss:nan/recons_loss:1.6590883985827531e-06
+epoch:2/train_loss:2.6677506600776723e-06/mask_loss:nan/recons_loss:2.6677506600776723e-06
+epoch:2/val_loss:5.614047857420701e-07/mask_loss:nan/recons_loss:5.614047857420701e-07
